@@ -3,11 +3,11 @@ import 'package:http/http.dart' as http;
 
 /// AI 诊断结果
 class DiagnosticResult {
-  final int tonePerception; // 声调感知分 (0-100)
-  final int vocabularyLevel; // 词汇基础 (0-100)
-  final String learningGoal; // "work" / "study" / "life"
-  final List<String> weakTones; // 弱项声调 e.g. ["4", "6"]
-  final String summary; // 一句话总结
+  final int tonePerception;
+  final int vocabularyLevel;
+  final String learningGoal;
+  final List<String> weakTones;
+  final String summary;
 
   DiagnosticResult({
     required this.tonePerception,
@@ -22,7 +22,7 @@ class DiagnosticResult {
 class CoachMessage {
   final String role; // "ming" | "user"
   final String text;
-  final String? correction; // 纠错提示（仅阿明的消息）
+  final String? correction;
 
   CoachMessage({required this.role, required this.text, this.correction});
 }
@@ -30,9 +30,9 @@ class CoachMessage {
 /// AI 对话复盘
 class SessionReview {
   final int overallScore;
-  final List<String> highlights; // 做得好的
-  final List<String> improvements; // 要改进的
-  final List<String> suggestedExercises; // 推荐练习
+  final List<String> highlights;
+  final List<String> improvements;
+  final List<String> suggestedExercises;
 
   SessionReview({
     required this.overallScore,
@@ -42,25 +42,30 @@ class SessionReview {
   });
 }
 
-/// AI 教练服务 — 诊断 + 陪练 + 复盘
+/// AI 教练服务 — 基于通义千问 Qwen
+/// 粤语能力强、国内直连、¥2-4/M tokens
 class AICoachService {
-  static const String _apiKey = 'YOUR_CLAUDE_API_KEY';
-  static const String _baseUrl = 'https://api.anthropic.com/v1/messages';
-  static const String _modelFast = 'claude-haiku-4-5-20251001';
-  static const String _modelSmart = 'claude-sonnet-5-20251001';
+  // 阿里云 DashScope API Key (从 https://dashscope.console.aliyun.com 获取)
+  static const String _apiKey = 'YOUR_QWEN_API_KEY';
+  static const String _baseUrl =
+      'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+
+  // qwen-plus: ¥2/M 输入 ¥4/M 输出，日常对话够用
+  // qwen-max: 复杂推理用，复盘/诊断时切换
+  static const String _modelFast = 'qwen-plus';
+  static const String _modelSmart = 'qwen-max';
 
   bool get isConfigured =>
-      _apiKey.isNotEmpty && _apiKey != 'YOUR_CLAUDE_API_KEY';
+      _apiKey.isNotEmpty && _apiKey != 'YOUR_QWEN_API_KEY';
 
   // ==========================================
   // ① 初始诊断
   // ==========================================
 
-  /// 根据用户的声调测试结果和背景信息，AI 分析学习路径
   Future<DiagnosticResult> diagnose({
-    required int toneTestScore, // 声调分辨测试得分 (0-10)
-    required int vocabTestScore, // 词汇摸底得分 (0-10)
-    required String goal, // "work" / "study" / "life"
+    required int toneTestScore,
+    required int vocabTestScore,
+    required String goal,
   }) async {
     if (!isConfigured) {
       return DiagnosticResult(
@@ -68,7 +73,7 @@ class AICoachService {
         vocabularyLevel: vocabTestScore * 10,
         learningGoal: goal,
         weakTones: toneTestScore < 5 ? ['4', '5', '6'] : [],
-        summary: '请配置 Claude API Key 以获得个性化诊断',
+        summary: '请配置通义千问 API Key 以获得个性化诊断',
       );
     }
 
@@ -90,15 +95,14 @@ class AICoachService {
 只返回 JSON，不要其他文字。''';
 
     try {
-      final result = await _callClaude(prompt, model: _modelFast);
+      final result = await _call(prompt, model: _modelFast);
       final json = jsonDecode(_extractJson(result)) as Map<String, dynamic>;
       return DiagnosticResult(
         tonePerception: (json['tonePerception'] as num).toInt(),
         vocabularyLevel: (json['vocabularyLevel'] as num).toInt(),
         learningGoal: goal,
-        weakTones: (json['weakTones'] as List)
-            .map((e) => e.toString())
-            .toList(),
+        weakTones:
+            (json['weakTones'] as List).map((e) => e.toString()).toList(),
         summary: json['summary'] as String,
       );
     } catch (_) {
@@ -131,15 +135,13 @@ class AICoachService {
 4. 每 3-4 輪對話後，可以分享一個相關嘅香港文化小貼士
 
 場景：{scene}
-難度：{level}
-''';
+難度：{level}''';
 
-  /// 生成阿明的下一句回复
   Future<CoachMessage> chat({
-    required String scene, // e.g. "茶餐厅点餐"
-    required String level, // "beginner" | "intermediate"
-    required List<Map<String, String>> history, // [{role, text}]
-    required String userInput, // 用户说的话（粤语或普通话）
+    required String scene,
+    required String level,
+    required List<Map<String, String>> history,
+    required String userInput,
   }) async {
     if (!isConfigured) {
       return CoachMessage(
@@ -148,16 +150,13 @@ class AICoachService {
       );
     }
 
-    final messages = <Map<String, dynamic>>[
-      {
-        'role': 'user',
-        'content': _mingPersona
-            .replaceAll('{scene}', scene)
-            .replaceAll('{level}', level),
-      },
-    ];
+    final systemPrompt = _mingPersona
+        .replaceAll('{scene}', scene)
+        .replaceAll('{level}', level);
 
-    // 添加历史对话
+    final messages = <Map<String, String>>[];
+
+    // 历史对话
     for (final h in history) {
       messages.add({
         'role': h['role'] == 'ming' ? 'assistant' : 'user',
@@ -165,22 +164,16 @@ class AICoachService {
       });
     }
 
-    // 添加用户最新输入
-    messages.add({
-      'role': 'user',
-      'content': '對方說：' + userInput,
-    });
+    // 用户最新输入
+    messages.add({'role': 'user', 'content': '對方說：$userInput'});
 
     try {
-      final response = await _callClaudeMessages(
-        system: _mingPersona
-            .replaceAll('{scene}', scene)
-            .replaceAll('{level}', level),
+      final response = await _callMessages(
+        system: systemPrompt,
         messages: messages,
         model: _modelFast,
       );
 
-      // 解析纠错部分
       String text = response;
       String? correction;
       if (response.contains('【糾正：') || response.contains('【纠正：')) {
@@ -234,16 +227,14 @@ $transcript
 繁體中文，友善鼓勵的語氣。只返回 JSON。''';
 
     try {
-      final result = await _callClaude(prompt, model: _modelSmart);
+      final result = await _call(prompt, model: _modelSmart);
       final json = jsonDecode(_extractJson(result)) as Map<String, dynamic>;
       return SessionReview(
         overallScore: (json['overallScore'] as num).toInt(),
-        highlights: (json['highlights'] as List)
-            .map((e) => e.toString())
-            .toList(),
-        improvements: (json['improvements'] as List)
-            .map((e) => e.toString())
-            .toList(),
+        highlights:
+            (json['highlights'] as List).map((e) => e.toString()).toList(),
+        improvements:
+            (json['improvements'] as List).map((e) => e.toString()).toList(),
         suggestedExercises: (json['suggestedExercises'] as List)
             .map((e) => e.toString())
             .toList(),
@@ -259,11 +250,12 @@ $transcript
   }
 
   // ==========================================
-  // 底层 API 调用
+  // 底层 API 调用 — 通义千问 (OpenAI 兼容)
   // ==========================================
 
-  Future<String> _callClaude(String prompt, {String? model}) async {
-    return _callClaudeMessages(
+  /// 简单 prompt 调用
+  Future<String> _call(String prompt, {String? model}) async {
+    return _callMessages(
       system: '你是一位粤语教学专家。始终用繁体中文回复。只返回要求的JSON，不要其他文字。',
       messages: [
         {'role': 'user', 'content': prompt},
@@ -272,40 +264,41 @@ $transcript
     );
   }
 
-  Future<String> _callClaudeMessages({
+  /// 多轮对话调用 (OpenAI 兼容格式)
+  Future<String> _callMessages({
     required String system,
-    required List<Map<String, dynamic>> messages,
+    required List<Map<String, String>> messages,
     String? model,
   }) async {
+    final body = {
+      'model': model ?? _modelFast,
+      'messages': [
+        {'role': 'system', 'content': system},
+        ...messages,
+      ],
+      'max_tokens': 1024,
+      'temperature': 0.7,
+    };
+
     final response = await http.post(
       Uri.parse(_baseUrl),
       headers: {
-        'x-api-key': _apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
+        'Authorization': 'Bearer $_apiKey',
+        'Content-Type': 'application/json',
       },
-      body: jsonEncode({
-        'model': model ?? _modelFast,
-        'max_tokens': 1024,
-        'system': system,
-        'messages': messages,
-      }),
+      body: jsonEncode(body),
     ).timeout(const Duration(seconds: 20));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final content = data['content'] as List;
-      return content
-          .whereType<Map<String, dynamic>>()
-          .map((c) => c['text'] as String)
-          .join('');
+      final choices = data['choices'] as List;
+      return choices.first['message']['content'] as String;
     } else {
-      throw Exception('Claude API error: ${response.statusCode}');
+      throw Exception('Qwen API error ${response.statusCode}: ${response.body}');
     }
   }
 
   String _extractJson(String text) {
-    // 尝试提取 {...} 部分
     final match = RegExp(r'\{[\s\S]*\}').firstMatch(text);
     return match?.group(0) ?? '{}';
   }
