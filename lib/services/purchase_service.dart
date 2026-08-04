@@ -1,0 +1,103 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
+/// 购买状态
+enum PurchaseState {
+  trial, // 3天试用中
+  active, // 已付费
+  expired, // 试用过期未付费
+  locked, // 从未购买
+}
+
+/// 买断支付服务 — ¥68 终身 + 3天试用
+class PurchaseService extends ChangeNotifier {
+  static const String _purchaseBox = 'purchase';
+  static const String _trialStartKey = 'trial_start';
+  static const String _purchasedKey = 'purchased';
+
+  late Box _box;
+  PurchaseState _state = PurchaseState.locked;
+  DateTime? _trialStart;
+  int _trialDaysRemaining = 3;
+
+  PurchaseState get state => _state;
+  int get trialDaysRemaining => _trialDaysRemaining;
+  bool get isPurchased => _state == PurchaseState.active;
+  bool get isTrial => _state == PurchaseState.trial;
+
+  /// 初始化（App 启动时调用）
+  Future<void> init() async {
+    _box = await Hive.openBox(_purchaseBox);
+
+    final purchased = _box.get(_purchasedKey, defaultValue: false) as bool;
+
+    if (purchased) {
+      _state = PurchaseState.active;
+      notifyListeners();
+      return;
+    }
+
+    // 检查试用状态
+    final trialStartStr = _box.get(_trialStartKey) as String?;
+
+    if (trialStartStr != null) {
+      _trialStart = DateTime.parse(trialStartStr);
+      final elapsed = DateTime.now().difference(_trialStart!);
+      final remaining =
+          3 - elapsed.inDays;
+
+      if (remaining <= 0) {
+        _state = PurchaseState.expired;
+        _trialDaysRemaining = 0;
+      } else {
+        _state = PurchaseState.trial;
+        _trialDaysRemaining = remaining;
+      }
+    } else {
+      _state = PurchaseState.locked;
+    }
+
+    notifyListeners();
+  }
+
+  /// 开始 3 天试用
+  Future<void> startTrial() async {
+    _trialStart = DateTime.now();
+    _trialDaysRemaining = 3;
+    _state = PurchaseState.trial;
+
+    await _box.put(_trialStartKey, _trialStart!.toIso8601String());
+
+    // 3 天后自动检查（App 重启时会重新计算）
+    notifyListeners();
+  }
+
+  /// 完成购买（¥68 买断）
+  Future<void> completePurchase() async {
+    _state = PurchaseState.active;
+    _trialDaysRemaining = 0;
+
+    await _box.put(_purchasedKey, true);
+
+    notifyListeners();
+  }
+
+  /// 恢复购买
+  Future<void> restorePurchase() async {
+    // TODO: 实际对接 App Store / Google Play 收据验证
+    final purchased = _box.get(_purchasedKey, defaultValue: false) as bool;
+    if (purchased) {
+      _state = PurchaseState.active;
+    }
+    notifyListeners();
+  }
+
+  /// 取消试用
+  Future<void> cancelTrial() async {
+    _state = PurchaseState.locked;
+    _trialDaysRemaining = 0;
+    await _box.delete(_trialStartKey);
+    notifyListeners();
+  }
+}
