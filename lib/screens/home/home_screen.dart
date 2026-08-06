@@ -8,6 +8,7 @@ import '../../widgets/progress_ring.dart';
 import '../courses/course_list_screen.dart';
 import '../coach/coach_screen.dart';
 import '../profile/profile_screen.dart';
+import '../review/flashcard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -133,7 +134,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Quick action: Review
                 if (srs.dueCount > 0)
                   GestureDetector(
-                    onTap: () => setState(() => _currentTab = 2),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FlashcardScreen(),
+                        ),
+                      );
+                    },
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(

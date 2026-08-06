@@ -12,11 +12,21 @@ class AppConstants {
   static const String settingsBox = 'settings';
 
   // Azure Speech (需在 Azure Portal 创建后填入)
-  static const String azureSpeechKey = 'YOUR_AZURE_SPEECH_KEY';
-  static const String azureSpeechRegion = 'eastasia';
-  static const String azureSpeechEndpoint =
-      'https://eastasia.api.cognitive.microsoft.com';
-  static const String azureTtsVoice = 'zh-HK-HiuGaaiNeural';
+  static const String azureSpeechKey = String.fromEnvironment(
+    'AZURE_SPEECH_KEY',
+  );
+  static const String azureSpeechRegion = String.fromEnvironment(
+    'AZURE_SPEECH_REGION',
+    defaultValue: 'eastasia',
+  );
+  static const String azureSpeechEndpoint = String.fromEnvironment(
+    'AZURE_SPEECH_ENDPOINT',
+    defaultValue: 'https://eastasia.api.cognitive.microsoft.com',
+  );
+  static const String azureTtsVoice = String.fromEnvironment(
+    'AZURE_TTS_VOICE',
+    defaultValue: 'zh-HK-HiuGaaiNeural',
+  );
 
   // 录音配置
   static const int maxRecordSeconds = 30;

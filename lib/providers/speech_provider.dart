@@ -1,7 +1,7 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import '../services/azure_speech_service.dart';
+import '../utils/recording_file.dart';
 import 'user_provider.dart';
 
 enum SpeechState { idle, recording, assessing, done }
@@ -28,6 +28,12 @@ class SpeechProvider extends ChangeNotifier {
     _errorMessage = '';
 
     try {
+      if (kIsWeb) {
+        _errorMessage = '网页端暂不支持本地录音评分，请使用移动端或桌面端';
+        notifyListeners();
+        return;
+      }
+
       final hasPermission = await _recorder.hasPermission();
       if (!hasPermission) {
         _errorMessage = '没有麦克风权限';
@@ -35,8 +41,7 @@ class SpeechProvider extends ChangeNotifier {
         return;
       }
 
-      final tempDir = Directory.systemTemp;
-      final filePath = '${tempDir.path}/yue_pronounce_${DateTime.now().millisecondsSinceEpoch}.wav';
+      final filePath = await createRecordingPath();
 
       await _recorder.start(
         const RecordConfig(
@@ -81,15 +86,11 @@ class SpeechProvider extends ChangeNotifier {
 
       // 保存评分
       if (result.overallScore > 0) {
-        userProvider.recordPronunciationScore(
-          result.overallScore.round(),
-        );
+        userProvider.recordPronunciationScore(result.overallScore.round());
       }
 
       // 清理录音文件
-      try {
-        await File(path).delete();
-      } catch (_) {}
+      await deleteRecordingFile(path);
 
       notifyListeners();
     } catch (e) {

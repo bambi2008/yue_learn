@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
 class AudioProvider extends ChangeNotifier {
   final AudioPlayer _player = AudioPlayer();
+  late final StreamSubscription<PlayerState> _playerStateSubscription;
 
   bool _isPlaying = false;
   double _speed = 1.0;
@@ -13,6 +16,15 @@ class AudioProvider extends ChangeNotifier {
   String? get currentAudio => _currentAudio;
 
   AudioPlayer get player => _player;
+
+  AudioProvider() {
+    _playerStateSubscription = _player.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        _isPlaying = false;
+        notifyListeners();
+      }
+    });
+  }
 
   /// 播放音频
   Future<void> play(String assetPath) async {
@@ -33,13 +45,6 @@ class AudioProvider extends ChangeNotifier {
       await _player.play();
       _isPlaying = true;
       notifyListeners();
-
-      _player.playerStateStream.listen((state) {
-        if (state.processingState == ProcessingState.completed) {
-          _isPlaying = false;
-          notifyListeners();
-        }
-      });
     } catch (e) {
       debugPrint('Audio playback error: $e');
     }
@@ -77,6 +82,7 @@ class AudioProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _playerStateSubscription.cancel();
     _player.dispose();
     super.dispose();
   }

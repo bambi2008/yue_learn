@@ -38,14 +38,23 @@ class UserProgress extends HiveObject {
     Map<String, int>? pronunciationScores,
     this.todayReviewed = 0,
     DateTime? createdAt,
-  })  : lastStudyDate = lastStudyDate ?? DateTime.now(),
-        completedScenes = completedScenes ?? {},
-        pronunciationScores = pronunciationScores ?? {},
-        createdAt = createdAt ?? DateTime.now();
+  }) : lastStudyDate = lastStudyDate ?? DateTime.now(),
+       completedScenes = completedScenes ?? {},
+       pronunciationScores = pronunciationScores ?? {},
+       createdAt = createdAt ?? DateTime.now();
 
   /// 标记今日学习（更新打卡）
   void markStudied() {
     final now = DateTime.now();
+
+    // 新用户第一次学习时，默认的 lastStudyDate 也是今天，
+    // 因此需要优先建立第一天的连续学习记录。
+    if (streakDays == 0) {
+      streakDays = 1;
+      lastStudyDate = now;
+      return;
+    }
+
     final today = DateTime(now.year, now.month, now.day);
     final last = DateTime(
       lastStudyDate.year,

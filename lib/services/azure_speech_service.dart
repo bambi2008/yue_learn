@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../utils/constants.dart';
+import '../utils/recording_file.dart';
 
 /// Azure 发音评估结果
 class PronunciationResult {
@@ -114,8 +114,7 @@ class AzureSpeechService {
   final String _region = AppConstants.azureSpeechRegion;
 
   /// 检查是否已配置 Azure Key
-  bool get isConfigured =>
-      _key.isNotEmpty && _key != 'YOUR_AZURE_SPEECH_KEY';
+  bool get isConfigured => _key.isNotEmpty;
 
   /// 使用 Azure Pronunciation Assessment 评分
   /// [audioFilePath] - 录音文件路径 (.wav, PCM 16kHz 16bit mono)
@@ -129,7 +128,7 @@ class AzureSpeechService {
     }
 
     try {
-      final audioBytes = await File(audioFilePath).readAsBytes();
+      final audioBytes = await readRecordingBytes(audioFilePath);
 
       // Azure Speech-to-Text REST API with Pronunciation Assessment
       final url =

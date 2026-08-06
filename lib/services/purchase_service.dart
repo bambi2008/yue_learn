@@ -42,17 +42,22 @@ class PurchaseService extends ChangeNotifier {
     final trialStartStr = _box.get(_trialStartKey) as String?;
 
     if (trialStartStr != null) {
-      _trialStart = DateTime.parse(trialStartStr);
-      final elapsed = DateTime.now().difference(_trialStart!);
-      final remaining =
-          3 - elapsed.inDays;
+      try {
+        _trialStart = DateTime.parse(trialStartStr);
+        final elapsed = DateTime.now().difference(_trialStart!);
+        final remaining = 3 - elapsed.inDays;
 
-      if (remaining <= 0) {
-        _state = PurchaseState.expired;
-        _trialDaysRemaining = 0;
-      } else {
-        _state = PurchaseState.trial;
-        _trialDaysRemaining = remaining;
+        if (remaining <= 0) {
+          _state = PurchaseState.expired;
+          _trialDaysRemaining = 0;
+        } else {
+          _state = PurchaseState.trial;
+          _trialDaysRemaining = remaining;
+        }
+      } catch (_) {
+        // 损坏的本地状态不能阻塞 App 启动，回到未开始试用状态。
+        await _box.delete(_trialStartKey);
+        _state = PurchaseState.locked;
       }
     } else {
       _state = PurchaseState.locked;
@@ -63,6 +68,11 @@ class PurchaseService extends ChangeNotifier {
 
   /// 开始 3 天试用
   Future<void> startTrial() async {
+    // 已经开始过的试用（包括已过期）不能重新计时。
+    if (_box.get(_trialStartKey) != null) {
+      return;
+    }
+
     _trialStart = DateTime.now();
     _trialDaysRemaining = 3;
     _state = PurchaseState.trial;

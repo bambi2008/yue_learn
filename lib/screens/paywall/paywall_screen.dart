@@ -19,38 +19,45 @@ class PaywallScreen extends StatelessWidget {
               const SizedBox(height: 40),
 
               // Header
-              const Text('🇭🇰',
-                  style: TextStyle(fontSize: 56)),
+              const Text('🇭🇰', style: TextStyle(fontSize: 56)),
               const SizedBox(height: 16),
-              const Text('粤讲粤易',
-                  style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white)),
+              const Text(
+                '粤讲粤易',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
               const SizedBox(height: 8),
-              const Text('最高效的港式粤语学习工具',
-                  style: TextStyle(
-                      fontSize: 16, color: Colors.white70)),
+              const Text(
+                '最高效的港式粤语学习工具',
+                style: TextStyle(fontSize: 16, color: Colors.white70),
+              ),
 
               const SizedBox(height: 40),
 
               // Value props
               _ValueProp(
-                  icon: '⚡',
-                  title: '7天应急开口，30天日常聊天',
-                  subtitle: '最短时间实现粤语基本交流'),
+                icon: '⚡',
+                title: '7天应急开口，30天日常聊天',
+                subtitle: '最短时间实现粤语基本交流',
+              ),
               _ValueProp(
-                  icon: '🤖',
-                  title: 'AI 教练「阿明」24小时陪练',
-                  subtitle: '像跟香港朋友聊天一样自然学习'),
+                icon: '🤖',
+                title: 'AI 教练「阿明」24小时陪练',
+                subtitle: '像跟香港朋友聊天一样自然学习',
+              ),
               _ValueProp(
-                  icon: '🎯',
-                  title: '音素级发音纠错',
-                  subtitle: '精确到每个声母、韵母、声调的反馈'),
+                icon: '🎯',
+                title: '音素级发音纠错',
+                subtitle: '精确到每个声母、韵母、声调的反馈',
+              ),
               _ValueProp(
-                  icon: '🧠',
-                  title: '智能学习路径',
-                  subtitle: 'AI诊断你的薄弱点，只练不会的'),
+                icon: '🧠',
+                title: '智能学习路径',
+                subtitle: 'AI诊断你的薄弱点，只练不会的',
+              ),
 
               const SizedBox(height: 32),
 
@@ -71,48 +78,65 @@ class PaywallScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    const Text('终身买断',
-                        style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.textSecondary)),
+                    const Text(
+                      '终身买断',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    const Text('¥68',
-                        style: TextStyle(
-                            fontSize: 48,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.textPrimary)),
+                    const Text(
+                      '¥68',
+                      style: TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.success.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text('含 3 天免费试用',
-                          style: TextStyle(
-                              color: AppColors.success,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600)),
+                      child: const Text(
+                        '含 3 天免费试用',
+                        style: TextStyle(
+                          color: AppColors.success,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     const Divider(),
                     const SizedBox(height: 12),
-                    ..._features.map((f) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.check_circle,
-                                  color: AppColors.success,
-                                  size: 18),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                  child: Text(f,
-                                      style: const TextStyle(
-                                          fontSize: 14))),
-                            ],
-                          ),
-                        )),
+                    ..._features.map(
+                      (f) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.check_circle,
+                              color: AppColors.success,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                f,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -128,12 +152,13 @@ class PaywallScreen extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
-                  child: const Text('免费试用 3 天',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700)),
+                  child: const Text(
+                    '免费试用 3 天',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -142,12 +167,9 @@ class PaywallScreen extends StatelessWidget {
               RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(
-                  style: const TextStyle(
-                      fontSize: 12, color: Colors.white54),
+                  style: const TextStyle(fontSize: 12, color: Colors.white54),
                   children: const [
-                    TextSpan(
-                        text:
-                            'YumCha 一年 ¥145 | 我们是 ¥68 永久\n'),
+                    TextSpan(text: 'YumCha 一年 ¥145 | 我们是 ¥68 永久\n'),
                     TextSpan(text: '一杯咖啡的价格，掌握一门语言'),
                   ],
                 ),
@@ -159,8 +181,10 @@ class PaywallScreen extends StatelessWidget {
                   // 恢复购买
                   purchaseService.restorePurchase();
                 },
-                child: const Text('恢复购买',
-                    style: TextStyle(color: Colors.white38)),
+                child: const Text(
+                  '恢复购买',
+                  style: TextStyle(color: Colors.white38),
+                ),
               ),
             ],
           ),
@@ -171,15 +195,10 @@ class PaywallScreen extends StatelessWidget {
 
   void _startTrial(BuildContext context) async {
     await purchaseService.startTrial();
-
-    if (context.mounted) {
-      // 试用已开始，关闭支付墙
-      Navigator.of(context).pop();
-    }
   }
 
   static const _features = [
-    '全部 14 个场景课程',
+    '全部 12 个场景课程',
     'AI 智能学习路径',
     'AI 教练「阿明」无限陪练',
     'Azure 音素级发音评分',
@@ -210,15 +229,19 @@ class _ValueProp extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(subtitle,
-                    style: const TextStyle(
-                        fontSize: 13, color: Colors.white54)),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontSize: 13, color: Colors.white54),
+                ),
               ],
             ),
           ),

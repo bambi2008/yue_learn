@@ -46,7 +46,7 @@ class SessionReview {
 /// 粤语能力强、国内直连、¥2-4/M tokens
 class AICoachService {
   // 阿里云 DashScope API Key (从 https://dashscope.console.aliyun.com 获取)
-  static const String _apiKey = 'YOUR_QWEN_API_KEY';
+  static const String _apiKey = String.fromEnvironment('QWEN_API_KEY');
   static const String _baseUrl =
       'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
 
@@ -55,8 +55,7 @@ class AICoachService {
   static const String _modelFast = 'qwen-plus';
   static const String _modelSmart = 'qwen-max';
 
-  bool get isConfigured =>
-      _apiKey.isNotEmpty && _apiKey != 'YOUR_QWEN_API_KEY';
+  bool get isConfigured => _apiKey.isNotEmpty;
 
   // ==========================================
   // ① 初始诊断
@@ -77,7 +76,8 @@ class AICoachService {
       );
     }
 
-    final prompt = '''
+    final prompt =
+        '''
 你是一位粤语教学专家。根据以下测试结果，分析这位普通话母语者的粤语学习路径：
 
 声调分辨测试：$toneTestScore/10 分
@@ -101,8 +101,9 @@ class AICoachService {
         tonePerception: (json['tonePerception'] as num).toInt(),
         vocabularyLevel: (json['vocabularyLevel'] as num).toInt(),
         learningGoal: goal,
-        weakTones:
-            (json['weakTones'] as List).map((e) => e.toString()).toList(),
+        weakTones: (json['weakTones'] as List)
+            .map((e) => e.toString())
+            .toList(),
         summary: json['summary'] as String,
       );
     } catch (_) {
@@ -144,10 +145,7 @@ class AICoachService {
     required String userInput,
   }) async {
     if (!isConfigured) {
-      return CoachMessage(
-        role: 'ming',
-        text: '哎呀，我而家未連到線⋯⋯不如你試下跟住課程讀先？',
-      );
+      return CoachMessage(role: 'ming', text: '哎呀，我而家未連到線⋯⋯不如你試下跟住課程讀先？');
     }
 
     final systemPrompt = _mingPersona
@@ -184,10 +182,7 @@ class AICoachService {
 
       return CoachMessage(role: 'ming', text: text, correction: correction);
     } catch (_) {
-      return CoachMessage(
-        role: 'ming',
-        text: '講得好！繼續努力呀～ 💪',
-      );
+      return CoachMessage(role: 'ming', text: '講得好！繼續努力呀～ 💪');
     }
   }
 
@@ -207,10 +202,12 @@ class AICoachService {
       );
     }
 
-    final transcript =
-        history.map((h) => '${h['role']}: ${h['text']}').join('\n');
+    final transcript = history
+        .map((h) => '${h['role']}: ${h['text']}')
+        .join('\n');
 
-    final prompt = '''
+    final prompt =
+        '''
 分析以下粵語對話練習，給出學習者表現評估：
 
 對話記錄：
@@ -231,10 +228,12 @@ $transcript
       final json = jsonDecode(_extractJson(result)) as Map<String, dynamic>;
       return SessionReview(
         overallScore: (json['overallScore'] as num).toInt(),
-        highlights:
-            (json['highlights'] as List).map((e) => e.toString()).toList(),
-        improvements:
-            (json['improvements'] as List).map((e) => e.toString()).toList(),
+        highlights: (json['highlights'] as List)
+            .map((e) => e.toString())
+            .toList(),
+        improvements: (json['improvements'] as List)
+            .map((e) => e.toString())
+            .toList(),
         suggestedExercises: (json['suggestedExercises'] as List)
             .map((e) => e.toString())
             .toList(),
@@ -280,21 +279,25 @@ $transcript
       'temperature': 0.7,
     };
 
-    final response = await http.post(
-      Uri.parse(_baseUrl),
-      headers: {
-        'Authorization': 'Bearer $_apiKey',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(body),
-    ).timeout(const Duration(seconds: 20));
+    final response = await http
+        .post(
+          Uri.parse(_baseUrl),
+          headers: {
+            'Authorization': 'Bearer $_apiKey',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 20));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final choices = data['choices'] as List;
       return choices.first['message']['content'] as String;
     } else {
-      throw Exception('Qwen API error ${response.statusCode}: ${response.body}');
+      throw Exception(
+        'Qwen API error ${response.statusCode}: ${response.body}',
+      );
     }
   }
 

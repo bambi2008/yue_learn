@@ -5,6 +5,7 @@ import '../../providers/user_provider.dart';
 import '../../providers/srs_provider.dart';
 import '../../widgets/dialogue_bubble.dart';
 import '../../theme/app_colors.dart';
+import '../review/flashcard_screen.dart';
 
 class DialogueScreen extends StatefulWidget {
   final Scene scene;
@@ -34,12 +35,11 @@ class _DialogueScreenState extends State<DialogueScreen> {
           TextButton(
             onPressed: () {
               setState(() {
-                _expandedSentence =
-                    _expandedSentence == null ? 0 : null;
+                _expandedSentence = _expandedSentence == -1 ? null : -1;
               });
             },
             child: Text(
-              _expandedSentence == null ? '展开全部' : '收起',
+              _expandedSentence == -1 ? '收起' : '展开全部',
               style: const TextStyle(fontSize: 13),
             ),
           ),
@@ -57,9 +57,9 @@ class _DialogueScreenState extends State<DialogueScreen> {
                   return Expanded(
                     child: GestureDetector(
                       onTap: () => setState(() {
-                            _currentDialogue = i;
-                            _expandedSentence = null;
-                          }),
+                        _currentDialogue = i;
+                        _expandedSentence = null;
+                      }),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -75,8 +75,9 @@ class _DialogueScreenState extends State<DialogueScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color:
-                                isActive ? Colors.white : AppColors.textSecondary,
+                            color: isActive
+                                ? Colors.white
+                                : AppColors.textSecondary,
                           ),
                         ),
                       ),
@@ -102,8 +103,9 @@ class _DialogueScreenState extends State<DialogueScreen> {
                   showDetail: isExpanded || _expandedSentence == -1,
                   onTap: () {
                     setState(() {
-                      _expandedSentence =
-                          _expandedSentence == index ? null : index;
+                      _expandedSentence = _expandedSentence == index
+                          ? null
+                          : index;
                     });
                   },
                 );
@@ -130,9 +132,9 @@ class _DialogueScreenState extends State<DialogueScreen> {
                   if (_currentDialogue > 0)
                     OutlinedButton.icon(
                       onPressed: () => setState(() {
-                            _currentDialogue--;
-                            _expandedSentence = null;
-                          }),
+                        _currentDialogue--;
+                        _expandedSentence = null;
+                      }),
                       icon: const Icon(Icons.arrow_back, size: 18),
                       label: const Text('上一段'),
                     ),
@@ -149,10 +151,10 @@ class _DialogueScreenState extends State<DialogueScreen> {
                           });
                         }
                       },
-                      icon: Icon(isLastDialogue
-                          ? Icons.check
-                          : Icons.arrow_forward,
-                          size: 18),
+                      icon: Icon(
+                        isLastDialogue ? Icons.check : Icons.arrow_forward,
+                        size: 18,
+                      ),
                       label: Text(isLastDialogue ? '完成课程' : '下一段'),
                     ),
                 ],
@@ -169,32 +171,35 @@ class _DialogueScreenState extends State<DialogueScreen> {
 
     final userProvider = context.read<UserProvider>();
     final srsProvider = context.read<SRSProvider>();
+    final alreadyCompleted =
+        userProvider.completedScenes[widget.scene.id] == true;
 
-    // 标记场景完成
-    userProvider.completeScene(widget.scene.id);
+    if (!alreadyCompleted) {
+      // 标记场景完成
+      userProvider.completeScene(widget.scene.id);
 
-    // 生词加入 SRS
-    for (final v in widget.scene.vocabulary) {
-      srsProvider.addCard(
-        vocabId: v.id,
-        cantonese: v.cantonese,
-        jyutping: v.jyutping,
-        mandarin: v.mandarin,
-        audioPath: v.audioPath,
-        exampleCantonese: v.exampleCantonese,
-        exampleMandarin: v.exampleMandarin,
-      );
+      // 生词加入 SRS
+      for (final v in widget.scene.vocabulary) {
+        srsProvider.addCard(
+          vocabId: v.id,
+          cantonese: v.cantonese,
+          jyutping: v.jyutping,
+          mandarin: v.mandarin,
+          audioPath: v.audioPath,
+          exampleCantonese: v.exampleCantonese,
+          exampleMandarin: v.exampleMandarin,
+        );
+      }
+
+      // 更新已学词汇数
+      userProvider.addWordsLearned(widget.scene.vocabulary.length);
     }
-
-    // 更新已学词汇数
-    userProvider.addWordsLearned(widget.scene.vocabulary.length);
 
     // 显示完成弹窗
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
             Text('🎉', style: TextStyle(fontSize: 32)),
@@ -203,7 +208,9 @@ class _DialogueScreenState extends State<DialogueScreen> {
           ],
         ),
         content: Text(
-          '已学会 ${widget.scene.vocabulary.length} 个生词\n已加入复习队列',
+          alreadyCompleted
+              ? '这个场景已经完成，复习队列没有重复添加。'
+              : '已学会 ${widget.scene.vocabulary.length} 个生词\n已加入复习队列',
           style: const TextStyle(fontSize: 15),
         ),
         actions: [
@@ -216,8 +223,12 @@ class _DialogueScreenState extends State<DialogueScreen> {
           ),
           ElevatedButton(
             onPressed: () {
+              final navigator = Navigator.of(context);
               Navigator.of(ctx).pop();
-              Navigator.of(context).pop();
+              navigator.pop();
+              navigator.push(
+                MaterialPageRoute(builder: (_) => const FlashcardScreen()),
+              );
             },
             child: const Text('开始复习'),
           ),

@@ -17,23 +17,19 @@ class _CoachScreenState extends State<CoachScreen> {
   bool _isLoading = false;
   String _scene = '茶餐厅点餐';
 
-  static const _scenes = [
-    '茶餐厅点餐',
-    '港铁问路',
-    '商场买衫',
-    '自我介绍',
-    '开会讨论',
-    '自由倾偈',
-  ];
+  static const _scenes = ['茶餐厅点餐', '港铁问路', '商场买衫', '自我介绍', '开会讨论', '自由倾偈'];
 
   @override
   void initState() {
     super.initState();
-    _messages.add(CoachMessage(
-      role: 'ming',
-      text: '嗨！我係阿明，你嘅粵語朋友～\n'
-          '你想練咩場景呀？揀一個，或者隨便傾都得㗎！ 😄',
-    ));
+    _messages.add(
+      CoachMessage(
+        role: 'ming',
+        text:
+            '嗨！我係阿明，你嘅粵語朋友～\n'
+            '你想練咩場景呀？揀一個，或者隨便傾都得㗎！ 😄',
+      ),
+    );
   }
 
   @override
@@ -91,19 +87,16 @@ class _CoachScreenState extends State<CoachScreen> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _scenes.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
           final s = _scenes[i];
           final isSelected = s == _scene;
           return GestureDetector(
             onTap: () => setState(() => _scene = s),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.primary
-                    : AppColors.warmSurface,
+                color: isSelected ? AppColors.primary : AppColors.warmSurface,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -111,9 +104,7 @@ class _CoachScreenState extends State<CoachScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: isSelected
-                      ? Colors.white
-                      : AppColors.textSecondary,
+                  color: isSelected ? Colors.white : AppColors.textSecondary,
                 ),
               ),
             ),
@@ -130,16 +121,18 @@ class _CoachScreenState extends State<CoachScreen> {
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment:
-            isMing ? MainAxisAlignment.start : MainAxisAlignment.end,
+        mainAxisAlignment: isMing
+            ? MainAxisAlignment.start
+            : MainAxisAlignment.end,
         children: [
           if (isMing)
             const CircleAvatar(
               radius: 16,
               backgroundColor: AppColors.primary,
-              child: Text('明',
-                  style:
-                      TextStyle(fontSize: 14, color: Colors.white)),
+              child: Text(
+                '明',
+                style: TextStyle(fontSize: 14, color: Colors.white),
+              ),
             ),
           const SizedBox(width: 8),
           Flexible(
@@ -165,8 +158,7 @@ class _CoachScreenState extends State<CoachScreen> {
                     msg.text,
                     style: TextStyle(
                       fontSize: 15,
-                      color:
-                          isMing ? AppColors.textPrimary : Colors.white,
+                      color: isMing ? AppColors.textPrimary : Colors.white,
                     ),
                   ),
                   if (msg.correction != null) ...[
@@ -181,8 +173,7 @@ class _CoachScreenState extends State<CoachScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Text('💡 ',
-                              style: TextStyle(fontSize: 13)),
+                          const Text('💡 ', style: TextStyle(fontSize: 13)),
                           Expanded(
                             child: Text(
                               msg.correction!,
@@ -216,13 +207,16 @@ class _CoachScreenState extends State<CoachScreen> {
           CircleAvatar(
             radius: 16,
             backgroundColor: AppColors.primary,
-            child: Text('明',
-                style: TextStyle(fontSize: 14, color: Colors.white)),
+            child: Text(
+              '明',
+              style: TextStyle(fontSize: 14, color: Colors.white),
+            ),
           ),
           SizedBox(width: 12),
-          Text('阿明正在打字...',
-              style: TextStyle(
-                  fontSize: 13, color: AppColors.textSecondary)),
+          Text(
+            '阿明正在打字...',
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          ),
         ],
       ),
     );
@@ -248,10 +242,12 @@ class _CoachScreenState extends State<CoachScreen> {
               child: TextField(
                 controller: _textCtrl,
                 decoration: InputDecoration(
-                  hintText: '打字或者用语音输入粤语...',
+                  hintText: '输入你想练习的粤语...',
                   hintStyle: const TextStyle(fontSize: 14),
                   contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide.none,
@@ -272,8 +268,11 @@ class _CoachScreenState extends State<CoachScreen> {
                   color: AppColors.primary,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.send_rounded,
-                    color: Colors.white, size: 20),
+                child: const Icon(
+                  Icons.send_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
             ),
           ],
@@ -293,7 +292,10 @@ class _CoachScreenState extends State<CoachScreen> {
     _textCtrl.clear();
     _scrollToBottom();
 
+    // 当前输入已经加入消息列表；服务层会把 userInput 作为最新一轮追加，
+    // 因此历史记录要排除最后这条，避免同一句发送两次。
     final history = _messages
+        .take(_messages.length - 1)
         .map((m) => {'role': m.role, 'text': m.text})
         .toList();
 
@@ -304,6 +306,7 @@ class _CoachScreenState extends State<CoachScreen> {
       userInput: text,
     );
 
+    if (!mounted) return;
     setState(() {
       _messages.add(reply);
       _isLoading = false;
@@ -321,9 +324,8 @@ class _CoachScreenState extends State<CoachScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(
-        child: CircularProgressIndicator(color: Colors.white),
-      ),
+      builder: (ctx) =>
+          const Center(child: CircularProgressIndicator(color: Colors.white)),
     );
 
     final review = await _coach.reviewSession(history: history);
@@ -334,8 +336,7 @@ class _CoachScreenState extends State<CoachScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Text(
@@ -346,14 +347,14 @@ class _CoachScreenState extends State<CoachScreen> {
                 color: review.overallScore >= 80
                     ? AppColors.success
                     : review.overallScore >= 60
-                        ? AppColors.jyutping
-                        : AppColors.warning,
+                    ? AppColors.jyutping
+                    : AppColors.warning,
               ),
             ),
-            const Text(' 分',
-                style: TextStyle(
-                    fontSize: 16,
-                    color: AppColors.textSecondary)),
+            const Text(
+              ' 分',
+              style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
+            ),
           ],
         ),
         content: SingleChildScrollView(
@@ -362,33 +363,42 @@ class _CoachScreenState extends State<CoachScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (review.highlights.isNotEmpty) ...[
-                const Text('👍 做得好',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14)),
-                ...review.highlights.map((h) => Padding(
-                      padding: const EdgeInsets.only(top: 4, left: 8),
-                      child: Text('• $h', style: const TextStyle(fontSize: 13)),
-                    )),
+                const Text(
+                  '👍 做得好',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                ...review.highlights.map(
+                  (h) => Padding(
+                    padding: const EdgeInsets.only(top: 4, left: 8),
+                    child: Text('• $h', style: const TextStyle(fontSize: 13)),
+                  ),
+                ),
                 const SizedBox(height: 12),
               ],
               if (review.improvements.isNotEmpty) ...[
-                const Text('📖 要改进',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14)),
-                ...review.improvements.map((i) => Padding(
-                      padding: const EdgeInsets.only(top: 4, left: 8),
-                      child: Text('• $i', style: const TextStyle(fontSize: 13)),
-                    )),
+                const Text(
+                  '📖 要改进',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                ...review.improvements.map(
+                  (i) => Padding(
+                    padding: const EdgeInsets.only(top: 4, left: 8),
+                    child: Text('• $i', style: const TextStyle(fontSize: 13)),
+                  ),
+                ),
                 const SizedBox(height: 12),
               ],
               if (review.suggestedExercises.isNotEmpty) ...[
-                const Text('🎯 推荐练习',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14)),
-                ...review.suggestedExercises.map((e) => Padding(
-                      padding: const EdgeInsets.only(top: 4, left: 8),
-                      child: Text('• $e', style: const TextStyle(fontSize: 13)),
-                    )),
+                const Text(
+                  '🎯 推荐练习',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                ...review.suggestedExercises.map(
+                  (e) => Padding(
+                    padding: const EdgeInsets.only(top: 4, left: 8),
+                    child: Text('• $e', style: const TextStyle(fontSize: 13)),
+                  ),
+                ),
               ],
             ],
           ),
