@@ -13,11 +13,11 @@
 # 开发环境直连 Qwen（仅用于本地调试）
 flutter run --dart-define=QWEN_API_KEY=your_qwen_key --dart-define=AZURE_SPEECH_KEY=your_azure_key --dart-define=AZURE_SPEECH_REGION=eastasia
 
-# 生产环境：使用 OpenAI 兼容的服务端代理，不传 QWEN_API_KEY
-flutter build web --dart-define=AI_PROXY_BASE_URL=https://api.example.com/ai/chat/completions
+# 生产环境：使用服务端代理，不传 QWEN_API_KEY / AZURE_SPEECH_KEY
+flutter build web --dart-define=AI_PROXY_BASE_URL=https://api.example.com/ai/chat/completions --dart-define=AZURE_SPEECH_PROXY_URL=https://api.example.com/ai/pronunciation
 ```
 
-代理负责上游 Qwen 鉴权、用户身份校验、限流和成本控制。Azure 发音服务目前仍需单独接入服务端代理。
+代理负责上游 Qwen/Azure 鉴权、用户身份校验、限流和成本控制。AI 代理需兼容 OpenAI Chat Completions；发音代理需接受 WAV POST 和 `Pronunciation-Assessment` 请求头，并返回 Azure 兼容 JSON。
 
 ## 主要功能
 
@@ -31,5 +31,5 @@ flutter build web --dart-define=AI_PROXY_BASE_URL=https://api.example.com/ai/cha
 ## 当前限制
 
 - 支付服务仍是本地试用状态，尚未接入 App Store 或 Google Play 收据验证。
-- AI 和发音服务需要配置外部服务；未配置时使用离线提示。生产环境的 Qwen 应走 `AI_PROXY_BASE_URL`，Azure 代理尚未接入。
+- AI 和发音服务需要配置外部服务；未配置时使用离线提示。生产环境应分别配置 `AI_PROXY_BASE_URL` 和 `AZURE_SPEECH_PROXY_URL`。
 - Web 端暂不支持本地录音评分，移动端和桌面端可使用录音功能。

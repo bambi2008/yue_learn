@@ -111,6 +111,7 @@ class SpeechProvider extends ChangeNotifier {
   @override
   void dispose() {
     _recorder.dispose();
+    _service.dispose();
     super.dispose();
   }
 }

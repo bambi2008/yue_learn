@@ -23,6 +23,9 @@ class AppConstants {
     'AZURE_SPEECH_ENDPOINT',
     defaultValue: 'https://eastasia.api.cognitive.microsoft.com',
   );
+  static const String azureSpeechProxyUrl = String.fromEnvironment(
+    'AZURE_SPEECH_PROXY_URL',
+  );
   static const String azureTtsVoice = String.fromEnvironment(
     'AZURE_TTS_VOICE',
     defaultValue: 'zh-HK-HiuGaaiNeural',

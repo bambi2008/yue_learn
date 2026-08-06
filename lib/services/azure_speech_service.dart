@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../utils/constants.dart';
 import '../utils/recording_file.dart';
@@ -32,20 +33,16 @@ class PronunciationResult {
     }
 
     return PronunciationResult(
-      accuracyScore:
-          (json['AccuracyScore'] as num?)?.toDouble() ?? 0.0,
-      fluencyScore:
-          (json['FluencyScore'] as num?)?.toDouble() ?? 0.0,
-      completenessScore:
-          (json['CompletenessScore'] as num?)?.toDouble() ?? 0.0,
+      accuracyScore: (json['AccuracyScore'] as num?)?.toDouble() ?? 0.0,
+      fluencyScore: (json['FluencyScore'] as num?)?.toDouble() ?? 0.0,
+      completenessScore: (json['CompletenessScore'] as num?)?.toDouble() ?? 0.0,
       overallScore: (json['PronScore'] as num?)?.toDouble() ?? 0.0,
       words: words,
     );
   }
 
   /// 简化版（仅文本对比，离线模式）
-  factory PronunciationResult.simple(
-      String expected, String actual) {
+  factory PronunciationResult.simple(String expected, String actual) {
     // 简单编辑距离对比
     final score = _calculateSimpleScore(expected, actual);
     return PronunciationResult(
@@ -57,8 +54,7 @@ class PronunciationResult {
     );
   }
 
-  static double _calculateSimpleScore(
-      String expected, String actual) {
+  static double _calculateSimpleScore(String expected, String actual) {
     if (expected.isEmpty) return 0;
     if (actual.isEmpty) return 0;
 
@@ -69,8 +65,7 @@ class PronunciationResult {
     final set1 = expectedChars.toSet();
     final set2 = actualChars.toSet();
 
-    final intersection =
-        set1.intersection(set2).length;
+    final intersection = set1.intersection(set2).length;
     final union = set1.union(set2).length;
 
     if (union == 0) return 0;
@@ -90,31 +85,50 @@ class WordResult {
     this.errorType = 'None',
   });
 
-  bool get isCorrect =>
-      errorType == 'None' && accuracyScore >= 80;
+  bool get isCorrect => errorType == 'None' && accuracyScore >= 80;
 
   factory WordResult.fromJson(Map<String, dynamic> json) {
     return WordResult(
       word: json['Word'] as String? ?? '',
       accuracyScore:
-          (json['PronunciationAssessment']?['AccuracyScore']
-                  as num?)
+          (json['PronunciationAssessment']?['AccuracyScore'] as num?)
               ?.toDouble() ??
           0.0,
-      errorType: json['PronunciationAssessment']?['ErrorType']
-              as String? ??
-          'None',
+      errorType:
+          json['PronunciationAssessment']?['ErrorType'] as String? ?? 'None',
     );
   }
 }
 
 /// Azure Speech Service 封装
 class AzureSpeechService {
-  final String _key = AppConstants.azureSpeechKey;
-  final String _region = AppConstants.azureSpeechRegion;
+  final http.Client _client;
+  final bool _ownsClient;
+  final String _key;
+  final String _region;
+  final String _proxyUrl;
+
+  AzureSpeechService({
+    http.Client? client,
+    String? key,
+    String? region,
+    String? proxyUrl,
+  }) : _client = client ?? http.Client(),
+       _ownsClient = client == null,
+       _key = key ?? AppConstants.azureSpeechKey,
+       _region = region ?? AppConstants.azureSpeechRegion,
+       _proxyUrl = proxyUrl ?? AppConstants.azureSpeechProxyUrl;
+
+  bool get usesProxy => _proxyUrl.isNotEmpty;
 
   /// 检查是否已配置 Azure Key
-  bool get isConfigured => _key.isNotEmpty;
+  bool get isConfigured => usesProxy || (!kReleaseMode && _key.isNotEmpty);
+
+  void dispose() {
+    if (_ownsClient) {
+      _client.close();
+    }
+  }
 
   /// 使用 Azure Pronunciation Assessment 评分
   /// [audioFilePath] - 录音文件路径 (.wav, PCM 16kHz 16bit mono)
@@ -131,25 +145,29 @@ class AzureSpeechService {
       final audioBytes = await readRecordingBytes(audioFilePath);
 
       // Azure Speech-to-Text REST API with Pronunciation Assessment
-      final url =
-          'https://$_region.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?'
-          'language=zh-HK'
-          '&format=Detailed'
-          '&profanity=raw';
+      final url = usesProxy
+          ? _proxyUrl
+          : 'https://$_region.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?'
+                'language=zh-HK'
+                '&format=Detailed'
+                '&profanity=raw';
 
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Ocp-Apim-Subscription-Key': _key,
-          'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
-          'Pronunciation-Assessment':
-              '{"ReferenceText":"$referenceText",'
-                  '"GradingSystem":"HundredMark",'
-                  '"Granularity":"Word",'
-                  '"EnableMiscue":"true"}',
-        },
-        body: audioBytes,
-      ).timeout(const Duration(seconds: 15));
+      final headers = <String, String>{
+        'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+        'Pronunciation-Assessment': jsonEncode({
+          'ReferenceText': referenceText,
+          'GradingSystem': 'HundredMark',
+          'Granularity': 'Word',
+          'EnableMiscue': 'true',
+        }),
+      };
+      if (!usesProxy) {
+        headers['Ocp-Apim-Subscription-Key'] = _key;
+      }
+
+      final response = await _client
+          .post(Uri.parse(url), headers: headers, body: audioBytes)
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
