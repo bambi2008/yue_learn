@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../models/course.dart';
 import '../theme/app_colors.dart';
+import 'audio_button.dart';
 
 class DialogueBubble extends StatelessWidget {
   final Sentence sentence;
   final bool isLeft; // 对方（左）还是用户角色（右）
   final bool showDetail;
   final VoidCallback onTap;
+  final VoidCallback? onPractice;
 
   const DialogueBubble({
     super.key,
@@ -14,6 +16,7 @@ class DialogueBubble extends StatelessWidget {
     this.isLeft = true,
     this.showDetail = false,
     required this.onTap,
+    this.onPractice,
   });
 
   @override
@@ -21,14 +24,12 @@ class DialogueBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        mainAxisAlignment:
-            isLeft ? MainAxisAlignment.start : MainAxisAlignment.end,
+        mainAxisAlignment: isLeft
+            ? MainAxisAlignment.start
+            : MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (isLeft) ...[
-            _buildAvatar(isLeft),
-            const SizedBox(width: 8),
-          ],
+          if (isLeft) ...[_buildAvatar(isLeft), const SizedBox(width: 8)],
           Flexible(
             child: GestureDetector(
               onTap: onTap,
@@ -65,21 +66,32 @@ class DialogueBubble extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: isLeft
-                                ? AppColors.primary
-                                : Colors.white70,
+                            color: isLeft ? AppColors.primary : Colors.white70,
                           ),
                         ),
                       ),
-                    Text(
-                      sentence.cantonese,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: isLeft
-                            ? AppColors.textPrimary
-                            : Colors.white,
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            sentence.cantonese,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: isLeft
+                                  ? AppColors.textPrimary
+                                  : Colors.white,
+                            ),
+                          ),
+                        ),
+                        if (sentence.audioPath.isNotEmpty)
+                          AudioButton(
+                            audioPath: sentence.audioPath,
+                            size: 34,
+                            color: isLeft ? AppColors.primary : Colors.white,
+                          ),
+                      ],
                     ),
                     if (showDetail) ...[
                       const SizedBox(height: 8),
@@ -148,9 +160,7 @@ class DialogueBubble extends StatelessWidget {
                                       Expanded(
                                         child: Text(
                                           w.mandarin,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                          ),
+                                          style: const TextStyle(fontSize: 12),
                                         ),
                                       ),
                                     ],
@@ -162,15 +172,34 @@ class DialogueBubble extends StatelessWidget {
                         ),
                       ),
                     ],
+                    if (onPractice != null) ...[
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: onPractice,
+                          icon: const Icon(Icons.mic_none, size: 16),
+                          label: const Text('跟读评分'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: isLeft
+                                ? AppColors.primary
+                                : Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
             ),
           ),
-          if (!isLeft) ...[
-            const SizedBox(width: 8),
-            _buildAvatar(isLeft),
-          ],
+          if (!isLeft) ...[const SizedBox(width: 8), _buildAvatar(isLeft)],
         ],
       ),
     );
@@ -179,8 +208,9 @@ class DialogueBubble extends StatelessWidget {
   Widget _buildAvatar(bool left) {
     return CircleAvatar(
       radius: 16,
-      backgroundColor:
-          left ? AppColors.jyutping.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.2),
+      backgroundColor: left
+          ? AppColors.jyutping.withValues(alpha: 0.2)
+          : AppColors.primary.withValues(alpha: 0.2),
       child: Icon(
         left ? Icons.person : Icons.face,
         size: 16,

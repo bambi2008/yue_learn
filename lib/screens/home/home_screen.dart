@@ -3,9 +3,11 @@ import 'package:provider/provider.dart';
 import '../../providers/course_provider.dart';
 import '../../providers/srs_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../models/course.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/progress_ring.dart';
 import '../courses/course_list_screen.dart';
+import '../courses/dialogue_screen.dart';
 import '../coach/coach_screen.dart';
 import '../profile/profile_screen.dart';
 import '../review/flashcard_screen.dart';
@@ -23,12 +25,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // 加载课程数据
-    final courseProvider = context.read<CourseProvider>();
-    courseProvider.loadCourses();
-    // 重置每日计数
-    final userProvider = context.read<UserProvider>();
-    userProvider.resetTodayReviewedIfNeeded();
+    // 延后到首帧之后，避免在 Provider 祖先构建期间触发 notifyListeners。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      context.read<CourseProvider>().loadCourses();
+      context.read<UserProvider>().resetTodayReviewedIfNeeded();
+    });
   }
 
   @override
@@ -48,17 +51,25 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: (i) => setState(() => _currentTab = i),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: '首页'),
-          BottomNavigationBarItem(icon: Icon(Icons.menu_book_rounded), label: '课程'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.menu_book_rounded),
+            label: '课程',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.chat_rounded), label: '阿明'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: '我的'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_rounded),
+            label: '我的',
+          ),
         ],
       ),
     );
   }
 
   Widget _buildHomeTab() {
-    return Consumer2<UserProvider, SRSProvider>(
-      builder: (context, user, srs, _) {
+    return Consumer3<UserProvider, SRSProvider, CourseProvider>(
+      builder: (context, user, srs, courses, _) {
+        final firstScene = courses.getScene('dining_1');
+
         return SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -73,15 +84,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('粤讲粤易',
-                            style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.textPrimary)),
-                        Text('每日学几句，开口讲粤语',
-                            style: TextStyle(
-                                fontSize: 14,
-                                color: AppColors.textSecondary)),
+                        Text(
+                          '粤讲粤易',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          '每日学几句，开口讲粤语',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
                       ],
                     ),
                     ProgressRing(
@@ -91,7 +108,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Text(
                         '${user.totalScenesCompleted}/12',
                         style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w700),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
@@ -133,54 +152,109 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // Quick action: Review
                 if (srs.dueCount > 0)
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const FlashcardScreen(),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppColors.primary, AppColors.primaryLight],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.replay_rounded,
-                              color: Colors.white, size: 28),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('开始今日复习',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w700)),
-                                Text('${srs.dueCount} 张卡片等待复习',
-                                    style: const TextStyle(
-                                        color: Colors.white70, fontSize: 13)),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.arrow_forward_ios,
-                              color: Colors.white70, size: 18),
-                        ],
-                      ),
-                    ),
-                  ),
+                  _buildReviewCard(context, srs.dueCount)
+                else if (user.totalScenesCompleted == 0 && firstScene != null)
+                  _buildFirstLessonCard(context, firstScene),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildReviewCard(BuildContext context, int dueCount) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const FlashcardScreen()),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primary, AppColors.primaryLight],
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.replay_rounded, color: Colors.white, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '开始今日复习',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    '$dueCount 张卡片等待复习',
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white70,
+              size: 18,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFirstLessonCard(BuildContext context, Scene scene) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => DialogueScreen(scene: scene)),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.warmSurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            const Text('🍜', style: TextStyle(fontSize: 32)),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '开始第一课',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    '茶餐厅点餐 · 约 5 分钟，学会第一句粤语',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, size: 18),
+          ],
+        ),
+      ),
     );
   }
 
@@ -229,12 +303,17 @@ class _StatCard extends StatelessWidget {
         children: [
           Icon(icon, color: iconColor, size: 24),
           const SizedBox(height: 8),
-          Text(value,
-              style: const TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.w700)),
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 12, color: AppColors.textSecondary)),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
         ],
       ),
     );

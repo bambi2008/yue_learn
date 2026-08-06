@@ -6,6 +6,7 @@ import '../../providers/srs_provider.dart';
 import '../../widgets/dialogue_bubble.dart';
 import '../../theme/app_colors.dart';
 import '../review/flashcard_screen.dart';
+import '../pronunciation/pronunciation_screen.dart';
 
 class DialogueScreen extends StatefulWidget {
   final Scene scene;
@@ -101,6 +102,7 @@ class _DialogueScreenState extends State<DialogueScreen> {
                   sentence: sentence,
                   isLeft: isEven,
                   showDetail: isExpanded || _expandedSentence == -1,
+                  onPractice: () => _openPronunciation(context, sentence),
                   onTap: () {
                     setState(() {
                       _expandedSentence = _expandedSentence == index
@@ -162,6 +164,19 @@ class _DialogueScreenState extends State<DialogueScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _openPronunciation(BuildContext context, Sentence sentence) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PronunciationScreen(
+          cantonese: sentence.cantonese,
+          jyutping: sentence.jyutping,
+          mandarin: sentence.mandarin,
+        ),
       ),
     );
   }
