@@ -10,6 +10,9 @@ enum PurchaseState {
   locked, // 从未购买
 }
 
+/// 正式购买的处理结果。
+enum PurchaseResult { completed, unavailable }
+
 /// 买断支付服务 — ¥68 终身 + 3天试用
 class PurchaseService extends ChangeNotifier {
   static const String _purchaseBox = 'purchase';
@@ -100,6 +103,19 @@ class PurchaseService extends ChangeNotifier {
     await _box.put(_purchasedKey, true);
 
     notifyListeners();
+  }
+
+  /// 发起正式购买。
+  ///
+  /// 商店 SDK 尚未接入前显式返回 unavailable，避免把本地状态写入误当成
+  /// 真实支付成功。接入 App Store / Google Play 后，在这里处理商品查询、
+  /// 支付发起和收据验证，再调用 completePurchase。
+  Future<PurchaseResult> purchase() async {
+    if (isPurchased) {
+      return PurchaseResult.completed;
+    }
+
+    return PurchaseResult.unavailable;
   }
 
   /// 恢复购买

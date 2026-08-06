@@ -150,8 +150,7 @@ class PaywallScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed:
-                      isTrialExpired ? null : () => _startTrial(context),
+                  onPressed: isTrialExpired ? null : () => _startTrial(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
@@ -171,6 +170,25 @@ class PaywallScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 12, color: Colors.white54),
                 ),
               ],
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: () => _purchase(context),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white38),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Text(
+                    '购买 ¥68',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
               const SizedBox(height: 12),
 
               // 对比文案
@@ -205,6 +223,17 @@ class PaywallScreen extends StatelessWidget {
 
   void _startTrial(BuildContext context) async {
     await purchaseService.startTrial();
+  }
+
+  Future<void> _purchase(BuildContext context) async {
+    final result = await purchaseService.purchase();
+    if (!context.mounted || result == PurchaseResult.completed) {
+      return;
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('正式支付尚未接入，请先使用免费试用。')));
   }
 
   static const _features = [
