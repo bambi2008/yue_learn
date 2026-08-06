@@ -9,6 +9,8 @@ class PaywallScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTrialExpired = purchaseService.state == PurchaseState.expired;
+
     return Scaffold(
       backgroundColor: AppColors.darkBg,
       body: SafeArea(
@@ -148,19 +150,27 @@ class PaywallScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () => _startTrial(context),
+                  onPressed:
+                      isTrialExpired ? null : () => _startTrial(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    '免费试用 3 天',
+                  child: Text(
+                    isTrialExpired ? '试用已结束' : '免费试用 3 天',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
+              if (isTrialExpired) ...[
+                const SizedBox(height: 8),
+                const Text(
+                  '试用期已结束，正式购买功能尚未接入。',
+                  style: TextStyle(fontSize: 12, color: Colors.white54),
+                ),
+              ],
               const SizedBox(height: 12),
 
               // 对比文案
