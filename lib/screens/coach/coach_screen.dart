@@ -36,6 +36,7 @@ class _CoachScreenState extends State<CoachScreen> {
   void dispose() {
     _textCtrl.dispose();
     _scrollCtrl.dispose();
+    _coach.dispose();
     super.dispose();
   }
 

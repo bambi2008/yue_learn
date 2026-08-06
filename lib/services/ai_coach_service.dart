@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 /// AI 诊断结果
@@ -45,8 +46,11 @@ class SessionReview {
 /// AI 教练服务 — 基于通义千问 Qwen
 /// 粤语能力强、国内直连、¥2-4/M tokens
 class AICoachService {
-  // 阿里云 DashScope API Key (从 https://dashscope.console.aliyun.com 获取)
-  static const String _apiKey = String.fromEnvironment('QWEN_API_KEY');
+  // 开发环境可直连；生产环境应只配置服务端代理。
+  static const String _defaultApiKey = String.fromEnvironment('QWEN_API_KEY');
+  static const String _defaultProxyUrl = String.fromEnvironment(
+    'AI_PROXY_BASE_URL',
+  );
   static const String _baseUrl =
       'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
 
@@ -55,7 +59,26 @@ class AICoachService {
   static const String _modelFast = 'qwen-plus';
   static const String _modelSmart = 'qwen-max';
 
-  bool get isConfigured => _apiKey.isNotEmpty;
+  final http.Client _client;
+  final bool _ownsClient;
+  final String _apiKey;
+  final String _proxyUrl;
+
+  AICoachService({http.Client? client, String? apiKey, String? proxyUrl})
+    : _client = client ?? http.Client(),
+      _ownsClient = client == null,
+      _apiKey = apiKey ?? _defaultApiKey,
+      _proxyUrl = proxyUrl ?? _defaultProxyUrl;
+
+  bool get usesProxy => _proxyUrl.isNotEmpty;
+
+  bool get isConfigured => usesProxy || (!kReleaseMode && _apiKey.isNotEmpty);
+
+  void dispose() {
+    if (_ownsClient) {
+      _client.close();
+    }
+  }
 
   // ==========================================
   // ① 初始诊断
@@ -279,13 +302,15 @@ $transcript
       'temperature': 0.7,
     };
 
-    final response = await http
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (!usesProxy) {
+      headers['Authorization'] = 'Bearer $_apiKey';
+    }
+
+    final response = await _client
         .post(
-          Uri.parse(_baseUrl),
-          headers: {
-            'Authorization': 'Bearer $_apiKey',
-            'Content-Type': 'application/json',
-          },
+          Uri.parse(usesProxy ? _proxyUrl : _baseUrl),
+          headers: headers,
           body: jsonEncode(body),
         )
         .timeout(const Duration(seconds: 20));

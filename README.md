@@ -6,11 +6,18 @@
 
 这是一个 Flutter MVP。课程内容和学习进度默认使用本地数据，AI 教练和发音评估属于可选能力。
 
-如需启用外部服务，请通过编译参数传入密钥，不要把密钥直接写进源码：
+如需启用外部服务，请通过编译参数配置。Qwen 在生产环境应使用服务端代理，
+不要把 Qwen 密钥打进正式客户端：
 
 ```bash
+# 开发环境直连 Qwen（仅用于本地调试）
 flutter run --dart-define=QWEN_API_KEY=your_qwen_key --dart-define=AZURE_SPEECH_KEY=your_azure_key --dart-define=AZURE_SPEECH_REGION=eastasia
+
+# 生产环境：使用 OpenAI 兼容的服务端代理，不传 QWEN_API_KEY
+flutter build web --dart-define=AI_PROXY_BASE_URL=https://api.example.com/ai/chat/completions
 ```
+
+代理负责上游 Qwen 鉴权、用户身份校验、限流和成本控制。Azure 发音服务目前仍需单独接入服务端代理。
 
 ## 主要功能
 
@@ -24,5 +31,5 @@ flutter run --dart-define=QWEN_API_KEY=your_qwen_key --dart-define=AZURE_SPEECH_
 ## 当前限制
 
 - 支付服务仍是本地试用状态，尚未接入 App Store 或 Google Play 收据验证。
-- AI 和发音服务需要通过 `--dart-define` 配置密钥；未配置时使用离线提示。
+- AI 和发音服务需要配置外部服务；未配置时使用离线提示。生产环境的 Qwen 应走 `AI_PROXY_BASE_URL`，Azure 代理尚未接入。
 - Web 端暂不支持本地录音评分，移动端和桌面端可使用录音功能。
