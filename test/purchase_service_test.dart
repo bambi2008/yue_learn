@@ -90,4 +90,39 @@ void main() {
     await Hive.box('purchase_persistence').close();
     restoredService.dispose();
   });
+
+  test('does not downgrade a completed purchase to a trial', () async {
+    final service = PurchaseService(boxName: 'purchase_no_downgrade');
+    await service.init();
+    await service.completePurchase();
+
+    await service.startTrial();
+    await service.cancelTrial();
+
+    expect(service.state, PurchaseState.active);
+    expect(service.isPurchased, isTrue);
+
+    await Hive.box('purchase_no_downgrade').close();
+    service.dispose();
+  });
+
+  test('does not reset an expired trial when cancelled', () async {
+    final box = await Hive.openBox('purchase_no_reset');
+    await box.put(
+      'trial_start',
+      DateTime.now().subtract(const Duration(days: 4)).toIso8601String(),
+    );
+    await box.close();
+
+    final service = PurchaseService(boxName: 'purchase_no_reset');
+    await service.init();
+    await service.cancelTrial();
+    await service.startTrial();
+
+    expect(service.state, PurchaseState.expired);
+    expect(service.trialDaysRemaining, 0);
+
+    await Hive.box('purchase_no_reset').close();
+    service.dispose();
+  });
 }

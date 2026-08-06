@@ -71,6 +71,12 @@ class PurchaseService extends ChangeNotifier {
 
   /// 开始 3 天试用
   Future<void> startTrial() async {
+    // 已购买用户不能被外部调用切回试用状态。
+    if (_state == PurchaseState.active ||
+        (_box.get(_purchasedKey, defaultValue: false) as bool)) {
+      return;
+    }
+
     // 已经开始过的试用（包括已过期）不能重新计时。
     if (_box.get(_trialStartKey) != null) {
       return;
@@ -108,6 +114,11 @@ class PurchaseService extends ChangeNotifier {
 
   /// 取消试用
   Future<void> cancelTrial() async {
+    // 过期或已购买状态不能通过取消操作被重置。
+    if (_state != PurchaseState.trial) {
+      return;
+    }
+
     _state = PurchaseState.locked;
     _trialDaysRemaining = 0;
     await _box.delete(_trialStartKey);
