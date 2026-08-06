@@ -1,5 +1,12 @@
 # yue_learn
 
+## iOS / iPad 发布
+
+- iOS 工程已配置 iPhone 与 iPad（`TARGETED_DEVICE_FAMILY = 1,2`），最低版本为 iOS 13.0，并保留横竖屏支持。
+- 发音跟读需要麦克风权限；`Info.plist` 已加入系统权限说明。
+- 当前开发环境为 Windows，无法运行 Xcode 签名、归档和真机安装。发布前请在 macOS 上执行 `flutter pub get`、`flutter build ios --release`，并在 iPhone 与 iPad 各验证一次录音、发音评分、横竖屏和 Apple 签名。
+- App Bundle ID：`com.yuelearn.yueLearn`。正式上架仍需配置 Apple Developer Team、证书、Provisioning Profile，以及 App Store Connect 的支付与隐私信息。
+
 粤讲粤易——面向普通话母语者的港式粤语学习 App。
 
 ## 本地运行

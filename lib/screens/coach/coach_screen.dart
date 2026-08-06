@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/ai_coach_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/adaptive_content.dart';
 
 class CoachScreen extends StatefulWidget {
   const CoachScreen({super.key});
@@ -67,9 +68,15 @@ class _CoachScreenState extends State<CoachScreen> {
               itemCount: _messages.length + (_isLoading ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index == _messages.length) {
-                  return _buildTypingIndicator();
+                  return AdaptiveContent(
+                    maxWidth: 760,
+                    child: _buildTypingIndicator(),
+                  );
                 }
-                return _buildMessage(_messages[index]);
+                return AdaptiveContent(
+                  maxWidth: 760,
+                  child: _buildMessage(_messages[index]),
+                );
               },
             ),
           ),
@@ -225,58 +232,61 @@ class _CoachScreenState extends State<CoachScreen> {
 
   Widget _buildInputBar() {
     return SafeArea(
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _textCtrl,
-                decoration: InputDecoration(
-                  hintText: '输入你想练习的粤语...',
-                  hintStyle: const TextStyle(fontSize: 14),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: AppColors.warmSurface,
-                ),
-                onSubmitted: (_) => _sendMessage(),
+      child: AdaptiveContent(
+        maxWidth: 760,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, -2),
               ),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: _sendMessage,
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(
-                  color: AppColors.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.send_rounded,
-                  color: Colors.white,
-                  size: 20,
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _textCtrl,
+                  decoration: InputDecoration(
+                    hintText: '输入你想练习的粤语...',
+                    hintStyle: const TextStyle(fontSize: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: AppColors.warmSurface,
+                  ),
+                  onSubmitted: (_) => _sendMessage(),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _sendMessage,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.send_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

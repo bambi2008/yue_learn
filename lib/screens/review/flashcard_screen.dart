@@ -4,6 +4,7 @@ import '../../providers/srs_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../models/review_card.dart';
 import '../../widgets/flashcard.dart';
+import '../../widgets/adaptive_content.dart';
 import '../../theme/app_colors.dart';
 
 class FlashcardScreen extends StatelessWidget {
@@ -22,23 +23,28 @@ class FlashcardScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('🎊',
-                      style: TextStyle(fontSize: 64)),
+                  const Text('🎊', style: TextStyle(fontSize: 64)),
                   const SizedBox(height: 16),
-                  const Text('今日复习已完成！',
-                      style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700)),
+                  const Text(
+                    '今日复习已完成！',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  ),
                   const SizedBox(height: 8),
-                  const Text('明天再来吧',
-                      style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary)),
+                  const Text(
+                    '明天再来吧',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                   const SizedBox(height: 24),
-                  Text('已掌握 ${srsProvider.totalCards} 个词汇',
-                      style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary)),
+                  Text(
+                    '已掌握 ${srsProvider.totalCards} 个词汇',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -67,8 +73,7 @@ class _ReviewPageState extends State<_ReviewPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-            '复习 (${context.watch<SRSProvider>().dueCount} 张)'),
+        title: Text('复习 (${context.watch<SRSProvider>().dueCount} 张)'),
       ),
       body: Column(
         children: [
@@ -81,42 +86,51 @@ class _ReviewPageState extends State<_ReviewPage> {
               child: LinearProgressIndicator(
                 value: context.watch<SRSProvider>().totalCards > 0
                     ? 1 -
-                        context.watch<SRSProvider>().dueCount /
-                            context.watch<SRSProvider>().totalCards
+                          context.watch<SRSProvider>().dueCount /
+                              context.watch<SRSProvider>().totalCards
                     : 0,
                 minHeight: 4,
-                backgroundColor:
-                    AppColors.primary.withValues(alpha: 0.1),
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
               ),
             ),
           ),
           const SizedBox(height: 8),
-          Text('点击卡片翻转查看答案',
-              style: const TextStyle(
-                  fontSize: 12, color: AppColors.textSecondary)),
+          Text(
+            '点击卡片翻转查看答案',
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: 24),
 
           // Flashcard
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: FlashcardWidget(
-                card: widget.card,
-                showBack: _showRating,
+            child: AdaptiveContent(
+              maxWidth: 720,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: FlashcardWidget(
+                  card: widget.card,
+                  showBack: _showRating,
+                ),
               ),
             ),
           ),
 
           // Rating buttons
           if (!_showRating)
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: ElevatedButton.icon(
-                onPressed: () => _flipCard(),
-                icon: const Icon(Icons.flip),
-                label: const Text('翻转看答案'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 52),
+            AdaptiveContent(
+              maxWidth: 600,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: ElevatedButton.icon(
+                  onPressed: () => _flipCard(),
+                  icon: const Icon(Icons.flip),
+                  label: const Text('翻转看答案'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 52),
+                  ),
                 ),
               ),
             ),
@@ -136,9 +150,10 @@ class _ReviewPageState extends State<_ReviewPage> {
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       child: Column(
         children: [
-          const Text('你记得如何？',
-              style: TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w600)),
+          const Text(
+            '你记得如何？',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -203,11 +218,13 @@ class _RatingButton extends StatelessWidget {
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-          child: Text(label,
-              style: const TextStyle(
-                  fontSize: 14, fontWeight: FontWeight.w600)),
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
         ),
       ),
     );

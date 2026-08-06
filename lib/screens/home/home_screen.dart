@@ -11,6 +11,7 @@ import '../courses/dialogue_screen.dart';
 import '../coach/coach_screen.dart';
 import '../profile/profile_screen.dart';
 import '../review/flashcard_screen.dart';
+import '../../widgets/adaptive_content.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -73,89 +74,92 @@ class _HomeScreenState extends State<HomeScreen> {
         return SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '粤讲粤易',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
+            child: AdaptiveContent(
+              maxWidth: 720,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '粤讲粤易',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
-                        ),
-                        Text(
-                          '每日学几句，开口讲粤语',
-                          style: TextStyle(
+                          Text(
+                            '每日学几句，开口讲粤语',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      ProgressRing(
+                        progress: user.totalScenesCompleted / 12,
+                        size: 60,
+                        strokeWidth: 5,
+                        child: Text(
+                          '${user.totalScenesCompleted}/12',
+                          style: const TextStyle(
                             fontSize: 14,
-                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                      ],
-                    ),
-                    ProgressRing(
-                      progress: user.totalScenesCompleted / 12,
-                      size: 60,
-                      strokeWidth: 5,
-                      child: Text(
-                        '${user.totalScenesCompleted}/12',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Streak & stats
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatCard(
+                          icon: Icons.local_fire_department,
+                          iconColor: AppColors.primary,
+                          value: '${user.streakDays}',
+                          label: '连续打卡',
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatCard(
+                          icon: Icons.mic,
+                          iconColor: AppColors.jyutping,
+                          value: '${srs.dueCount}',
+                          label: '待复习',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatCard(
+                          icon: Icons.auto_stories,
+                          iconColor: AppColors.success,
+                          value: '${user.totalWordsLearned}',
+                          label: '已学词汇',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
 
-                // Streak & stats
-                Row(
-                  children: [
-                    Expanded(
-                      child: _StatCard(
-                        icon: Icons.local_fire_department,
-                        iconColor: AppColors.primary,
-                        value: '${user.streakDays}',
-                        label: '连续打卡',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _StatCard(
-                        icon: Icons.mic,
-                        iconColor: AppColors.jyutping,
-                        value: '${srs.dueCount}',
-                        label: '待复习',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _StatCard(
-                        icon: Icons.auto_stories,
-                        iconColor: AppColors.success,
-                        value: '${user.totalWordsLearned}',
-                        label: '已学词汇',
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Quick action: Review
-                if (srs.dueCount > 0)
-                  _buildReviewCard(context, srs.dueCount)
-                else if (user.totalScenesCompleted == 0 && firstScene != null)
-                  _buildFirstLessonCard(context, firstScene),
-              ],
+                  // Quick action: Review
+                  if (srs.dueCount > 0)
+                    _buildReviewCard(context, srs.dueCount)
+                  else if (user.totalScenesCompleted == 0 && firstScene != null)
+                    _buildFirstLessonCard(context, firstScene),
+                ],
+              ),
             ),
           ),
         );

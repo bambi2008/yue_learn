@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/speech_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/adaptive_content.dart';
 
 class PronunciationScreen extends StatefulWidget {
   final String cantonese;
@@ -35,70 +36,89 @@ class _PronunciationScreenState extends State<PronunciationScreen> {
         builder: (context, speech, _) {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                const SizedBox(height: 16),
+            child: AdaptiveContent(
+              maxWidth: 600,
+              child: Column(
+                children: [
+                  const SizedBox(height: 16),
 
-                // 参考句子
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.08),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      const Text('🎯 请跟读以下句子',
+                  // 参考句子
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          '🎯 请跟读以下句子',
                           style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textSecondary)),
-                      const SizedBox(height: 16),
-                      Text(widget.cantonese,
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          widget.cantonese,
                           style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 8),
-                      Text(widget.jyutping,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.jyutping,
                           style: const TextStyle(
-                              fontSize: 16,
-                              color: AppColors.jyutping)),
-                      const SizedBox(height: 6),
-                      Text(widget.mandarin,
+                            fontSize: 16,
+                            color: AppColors.jyutping,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          widget.mandarin,
                           style: const TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textSecondary)),
-                    ],
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 32),
+                  const SizedBox(height: 32),
 
-                // 录音按钮 / 评分结果
-                if (speech.state == SpeechState.idle ||
-                    speech.state == SpeechState.recording)
-                  _buildRecordButton(speech)
-                else if (speech.state == SpeechState.assessing)
-                  _buildAssessingIndicator()
-                else if (speech.state == SpeechState.done)
-                  _buildResult(speech),
+                  // 录音按钮 / 评分结果
+                  if (speech.state == SpeechState.idle ||
+                      speech.state == SpeechState.recording)
+                    _buildRecordButton(speech)
+                  else if (speech.state == SpeechState.assessing)
+                    _buildAssessingIndicator()
+                  else if (speech.state == SpeechState.done)
+                    _buildResult(speech),
 
-                // 错误信息
-                if (speech.errorMessage.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: Text(speech.errorMessage,
+                  // 错误信息
+                  if (speech.errorMessage.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Text(
+                        speech.errorMessage,
                         style: const TextStyle(
-                            color: AppColors.error, fontSize: 13),
-                        textAlign: TextAlign.center),
-                  ),
-              ],
+                          color: AppColors.error,
+                          fontSize: 13,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                ],
+              ),
             ),
           );
         },
@@ -124,15 +144,11 @@ class _PronunciationScreenState extends State<PronunciationScreen> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: isRecording
-                  ? AppColors.error
-                  : AppColors.primary,
+              color: isRecording ? AppColors.error : AppColors.primary,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: (isRecording
-                          ? AppColors.error
-                          : AppColors.primary)
+                  color: (isRecording ? AppColors.error : AppColors.primary)
                       .withValues(alpha: 0.3),
                   blurRadius: 20,
                   spreadRadius: isRecording ? 8 : 2,
@@ -151,16 +167,15 @@ class _PronunciationScreenState extends State<PronunciationScreen> {
           isRecording ? '点击停止' : '点击录音',
           style: TextStyle(
             fontSize: 13,
-            color: isRecording
-                ? AppColors.error
-                : AppColors.textSecondary,
+            color: isRecording ? AppColors.error : AppColors.textSecondary,
           ),
         ),
         if (isRecording) ...[
           const SizedBox(height: 8),
-          const Text('🔴 录音中... 最长 30 秒',
-              style: TextStyle(
-                  fontSize: 12, color: AppColors.textSecondary)),
+          const Text(
+            '🔴 录音中... 最长 30 秒',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
         ],
       ],
     );
@@ -176,9 +191,10 @@ class _PronunciationScreenState extends State<PronunciationScreen> {
           child: CircularProgressIndicator(strokeWidth: 3),
         ),
         SizedBox(height: 16),
-        Text('正在评估发音...',
-            style: TextStyle(
-                fontSize: 15, color: AppColors.textSecondary)),
+        Text(
+          '正在评估发音...',
+          style: TextStyle(fontSize: 15, color: AppColors.textSecondary),
+        ),
       ],
     );
   }
@@ -204,14 +220,9 @@ class _PronunciationScreenState extends State<PronunciationScreen> {
         // 三维评分
         Row(
           children: [
-            _ScoreChip(
-                label: '准确度',
-                score: result.accuracyScore),
-            _ScoreChip(
-                label: '流利度', score: result.fluencyScore),
-            _ScoreChip(
-                label: '完整度',
-                score: result.completenessScore),
+            _ScoreChip(label: '准确度', score: result.accuracyScore),
+            _ScoreChip(label: '流利度', score: result.fluencyScore),
+            _ScoreChip(label: '完整度', score: result.completenessScore),
           ],
         ),
         const SizedBox(height: 24),
@@ -220,9 +231,10 @@ class _PronunciationScreenState extends State<PronunciationScreen> {
         if (result.words.isNotEmpty) ...[
           const Align(
             alignment: Alignment.centerLeft,
-            child: Text('逐词评分',
-                style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w600)),
+            child: Text(
+              '逐词评分',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -231,31 +243,35 @@ class _PronunciationScreenState extends State<PronunciationScreen> {
             children: result.words.map((w) {
               return Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: w.isCorrect
                       ? AppColors.success.withValues(alpha: 0.1)
                       : AppColors.error.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: w.isCorrect
-                        ? AppColors.success
-                        : AppColors.error,
+                    color: w.isCorrect ? AppColors.success : AppColors.error,
                     width: 1.5,
                   ),
                 ),
                 child: Column(
                   children: [
-                    Text(w.word,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: w.isCorrect
-                              ? AppColors.success
-                              : AppColors.error,
-                        )),
-                    Text('${w.accuracyScore.round()}分',
-                        style: const TextStyle(fontSize: 10)),
+                    Text(
+                      w.word,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: w.isCorrect
+                            ? AppColors.success
+                            : AppColors.error,
+                      ),
+                    ),
+                    Text(
+                      '${w.accuracyScore.round()}分',
+                      style: const TextStyle(fontSize: 10),
+                    ),
                   ],
                 ),
               );
@@ -332,19 +348,17 @@ class _ScoreRing extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                score > 0
-                    ? '${score.round()}'
-                    : '--',
+                score > 0 ? '${score.round()}' : '--',
                 style: TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.w800,
                   color: _color,
                 ),
               ),
-              const Text('分',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary)),
+              const Text(
+                '分',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              ),
             ],
           ),
         ],
@@ -377,13 +391,18 @@ class _ScoreChip extends StatelessWidget {
               Text(
                 score > 0 ? '${score.round()}' : '--',
                 style: const TextStyle(
-                    fontSize: 24, fontWeight: FontWeight.w800),
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 4),
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary)),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
             ],
           ),
         ),
