@@ -16,6 +16,7 @@ class PurchaseService extends ChangeNotifier {
   static const String _trialStartKey = 'trial_start';
   static const String _purchasedKey = 'purchased';
 
+  final String _boxName;
   late Box _box;
   PurchaseState _state = PurchaseState.locked;
   DateTime? _trialStart;
@@ -26,9 +27,11 @@ class PurchaseService extends ChangeNotifier {
   bool get isPurchased => _state == PurchaseState.active;
   bool get isTrial => _state == PurchaseState.trial;
 
+  PurchaseService({String boxName = _purchaseBox}) : _boxName = boxName;
+
   /// 初始化（App 启动时调用）
   Future<void> init() async {
-    _box = await Hive.openBox(_purchaseBox);
+    _box = await Hive.openBox(_boxName);
 
     final purchased = _box.get(_purchasedKey, defaultValue: false) as bool;
 
