@@ -1,5 +1,12 @@
 # yue_learn
 
+## Windows build verification
+
+- The project passes the full Dart analysis and Flutter test suite on Windows.
+- Android release builds are supported. If Flutter's AOT compiler still fails in a workspace with non-ASCII characters, use an ASCII checkout path such as `C:\src\yue_learn` and run `flutter build apk --release` or `flutter build appbundle --release`.
+- Web release builds are supported and should be served over HTTP for verification (for example, `http://127.0.0.1:4174/`).
+- Windows desktop packaging requires Visual Studio with the `Desktop development with C++` workload; it is not installed in the current environment.
+
 ## iOS / iPad 发布
 
 - iOS 工程已配置 iPhone 与 iPad（`TARGETED_DEVICE_FAMILY = 1,2`），最低版本为 iOS 13.0，并保留横竖屏支持。

@@ -30,6 +30,8 @@ class PurchaseService extends ChangeNotifier {
   bool get isPurchased => _state == PurchaseState.active;
   bool get isTrial => _state == PurchaseState.trial;
 
+  // Keep the public parameter name so tests and callers can inject a Hive box.
+  // ignore: prefer_initializing_formals
   PurchaseService({String boxName = _purchaseBox}) : _boxName = boxName;
 
   /// 初始化（App 启动时调用）
