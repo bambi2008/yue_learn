@@ -12,6 +12,7 @@
 - iOS 工程已配置 iPhone 与 iPad（`TARGETED_DEVICE_FAMILY = 1,2`），最低版本为 iOS 13.0，并保留横竖屏支持。
 - 发音跟读需要麦克风权限；`Info.plist` 已加入系统权限说明。
 - macOS/Xcode 下的分析、测试、无签名及 Apple Development 签名 Release 构建，以及 iPhone/iPad 模拟器安装与启动均已通过。
+- App Store Distribution 签名的 1.0.0 build 3 IPA 已生成并通过签名/profile 校验，可直接提交 TestFlight。
 - 真机安装、录音和 TestFlight 仍需已连接设备及 App Store 分发配置；运行 `./scripts/ios_release_preflight.sh` 可重复执行发布预检。
 - App Bundle ID：`com.yuelearn.yueLearn`。正式上架仍需配置 Apple Developer Team、证书、Provisioning Profile，以及 App Store Connect 的支付与隐私信息。
 - 详细步骤与验收矩阵见 [iOS / iPadOS 发布交接](docs/ios-release.md)。

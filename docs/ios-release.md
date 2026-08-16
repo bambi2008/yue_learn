@@ -8,12 +8,14 @@
 - `flutter test`：通过。
 - iOS Release 无签名构建：通过，产物为 arm64。
 - Apple Development 签名 Release 构建：通过；签名完整性校验通过。
+- App Store Distribution 签名 IPA（build 3）：通过；`beta-reports-active=true`、`get-task-allow=false`，可提交 TestFlight。
 - Bundle ID：`com.yuelearn.yueLearn`。
 - 最低系统：iOS 13.0。
 - `UIDeviceFamily`：同时包含 iPhone（1）和 iPad（2）。
 - iPhone 17 Pro（iOS 26.5 模拟器）：安装、启动和首屏渲染通过。
 - iPad Pro 13-inch M5（iOS 26.5 模拟器）：安装、启动和宽屏首屏渲染通过。
 - 麦克风权限说明、横竖屏配置和 App 图标已进入构建产物。
+- App Store 图标与启动图已替换为正式品牌资源，build 3 不再报告 Flutter 默认占位资源警告。
 
 尚未完成的外部依赖：
 
@@ -72,6 +74,20 @@ flutter build ipa \
 ```
 
 不要把 Qwen 或 Azure 密钥通过 `--dart-define` 打入正式客户端。上传前检查 Archive 中的版本、签名 Team、Bundle ID、图标、隐私清单和 dSYM；随后先发 TestFlight Internal Testing，按上面的真机矩阵复验。
+
+本次已生成并验证 `build/ios/ipa/yue_learn.ipa`（版本 1.0.0，build 3）。上传需要 App Store Connect API key 或已登录的 Transporter；本机当前没有发现可用的上传凭据，因此尚未执行网络上传。
+
+使用 API key 上传：
+
+```bash
+xcrun altool --upload-app \
+  --type ios \
+  --file build/ios/ipa/yue_learn.ipa \
+  --apiKey <KEY_ID> \
+  --apiIssuer <ISSUER_ID>
+```
+
+或在 Transporter 中拖入 `build/ios/ipa/yue_learn.ipa`。上传完成后，在 App Store Connect 的 TestFlight > Builds 等待处理完成，再添加 Internal Testers。
 
 ## App Store Connect 准备
 
