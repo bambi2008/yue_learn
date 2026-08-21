@@ -5,12 +5,14 @@ import '../theme/app_colors.dart';
 
 class AudioButton extends StatelessWidget {
   final String audioPath;
+  final String? text;
   final double size;
   final Color? color;
 
   const AudioButton({
     super.key,
     required this.audioPath,
+    this.text,
     this.size = 40,
     this.color,
   });
@@ -23,7 +25,7 @@ class AudioButton extends StatelessWidget {
             audio.currentAudio == audioPath && audio.isPlaying;
 
         return GestureDetector(
-          onTap: () => audio.play(audioPath),
+          onTap: () => audio.play(audioPath, text: text),
           onLongPress: () {
             audio.toggleSpeed();
             ScaffoldMessenger.of(context).showSnackBar(

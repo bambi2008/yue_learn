@@ -4,17 +4,21 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:audio_session/audio_session.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 
 class AudioProvider extends ChangeNotifier {
   final AudioPlayer _player = AudioPlayer();
   late final StreamSubscription<PlayerState> _playerStateSubscription;
+  final FlutterTts _tts = FlutterTts();
 
   bool _isPlaying = false;
   double _speed = 1.0;
   String? _currentAudio;
   late final Future<void> _audioSessionReady;
+  late final Future<void> _ttsReady;
+  bool _usingSpeech = false;
 
   bool get isPlaying => _isPlaying;
   double get speed => _speed;
@@ -24,12 +28,33 @@ class AudioProvider extends ChangeNotifier {
 
   AudioProvider() {
     _audioSessionReady = _configureAudioSession();
+    _ttsReady = _configureSpeech();
     _playerStateSubscription = _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         _isPlaying = false;
         notifyListeners();
       }
     });
+  }
+
+  Future<void> _configureSpeech() async {
+    try {
+      await _tts.setLanguage('zh-HK');
+      await _tts.setSpeechRate(0.45);
+      await _tts.setVolume(1.0);
+      await _tts.setPitch(1.0);
+      await _tts.awaitSpeakCompletion(true);
+      if (Platform.isIOS) {
+        await _tts.setSharedInstance(true);
+        await _tts.setIosAudioCategory(
+          IosTextToSpeechAudioCategory.playback,
+          [IosTextToSpeechAudioCategoryOptions.defaultToSpeaker],
+          IosTextToSpeechAudioMode.spokenAudio,
+        );
+      }
+    } catch (error) {
+      debugPrint('Speech configuration error: $error');
+    }
   }
 
   Future<void> _configureAudioSession() async {
@@ -59,16 +84,41 @@ class AudioProvider extends ChangeNotifier {
   }
 
   /// 播放音频
-  Future<void> play(String assetPath) async {
+  Future<void> play(String assetPath, {String? text}) async {
     try {
       await _audioSessionReady;
       if (_currentAudio == assetPath && _isPlaying) {
-        await _player.pause();
+        if (_usingSpeech) {
+          await _tts.stop();
+        } else {
+          await _player.pause();
+        }
         _isPlaying = false;
         notifyListeners();
         return;
       }
 
+      // The repository's bundled audio is currently silent placeholder data.
+      // Use the device's Cantonese voice for real playback until recordings are
+      // replaced with non-silent assets.
+      if (text != null && text.trim().isNotEmpty) {
+        await _ttsReady;
+        await _player.stop();
+        await _tts.stop();
+        _usingSpeech = true;
+        _currentAudio = assetPath;
+        _isPlaying = true;
+        notifyListeners();
+        try {
+          await _tts.speak(text.trim());
+        } finally {
+          _isPlaying = false;
+          notifyListeners();
+        }
+        return;
+      }
+
+      _usingSpeech = false;
       if (_currentAudio != assetPath) {
         final filePath = await _materializeAsset(assetPath);
         await _player.setFilePath(filePath);
@@ -86,7 +136,9 @@ class AudioProvider extends ChangeNotifier {
 
   /// 停止播放
   Future<void> stop() async {
+    await _tts.stop();
     await _player.stop();
+    _usingSpeech = false;
     _isPlaying = false;
     notifyListeners();
   }
@@ -103,20 +155,29 @@ class AudioProvider extends ChangeNotifier {
       _speed = 1.0;
     }
 
-    await _player.setSpeed(_speed);
+    if (_usingSpeech) {
+      await _tts.setSpeechRate(0.45 * _speed);
+    } else {
+      await _player.setSpeed(_speed);
+    }
     notifyListeners();
   }
 
   /// 设置倍速
   Future<void> setSpeed(double speed) async {
     _speed = speed;
-    await _player.setSpeed(_speed);
+    if (_usingSpeech) {
+      await _tts.setSpeechRate(0.45 * _speed);
+    } else {
+      await _player.setSpeed(_speed);
+    }
     notifyListeners();
   }
 
   @override
   void dispose() {
     _playerStateSubscription.cancel();
+    _tts.stop();
     _player.dispose();
     super.dispose();
   }

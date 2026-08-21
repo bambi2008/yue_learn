@@ -88,6 +88,7 @@ class DialogueBubble extends StatelessWidget {
                         if (sentence.audioPath.isNotEmpty)
                           AudioButton(
                             audioPath: sentence.audioPath,
+                            text: sentence.cantonese,
                             size: 34,
                             color: isLeft ? AppColors.primary : Colors.white,
                           ),
