@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:path_provider/path_provider.dart';
 
 class AudioProvider extends ChangeNotifier {
   final AudioPlayer _player = AudioPlayer();
@@ -10,6 +14,7 @@ class AudioProvider extends ChangeNotifier {
   bool _isPlaying = false;
   double _speed = 1.0;
   String? _currentAudio;
+  late final Future<void> _audioSessionReady;
 
   bool get isPlaying => _isPlaying;
   double get speed => _speed;
@@ -18,6 +23,7 @@ class AudioProvider extends ChangeNotifier {
   AudioPlayer get player => _player;
 
   AudioProvider() {
+    _audioSessionReady = _configureAudioSession();
     _playerStateSubscription = _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         _isPlaying = false;
@@ -26,9 +32,36 @@ class AudioProvider extends ChangeNotifier {
     });
   }
 
+  Future<void> _configureAudioSession() async {
+    try {
+      final session = await AudioSession.instance;
+      await session.configure(const AudioSessionConfiguration.music());
+    } catch (error) {
+      debugPrint('Audio session configuration error: $error');
+    }
+  }
+
+  /// The bundled files are WAV/PCM data with legacy `.mp3` names. Materialise
+  /// them with a `.wav` extension so AVPlayer can select the correct decoder.
+  Future<String> _materializeAsset(String assetPath) async {
+    final base = await getTemporaryDirectory();
+    final directory = Directory('${base.path}/yue_learn_audio');
+    await directory.create(recursive: true);
+    final safeName = assetPath
+        .replaceAll('/', '_')
+        .replaceFirst(RegExp(r'\.[^.]+$'), '.wav');
+    final file = File('${directory.path}/$safeName');
+    if (!await file.exists()) {
+      final data = await rootBundle.load(assetPath);
+      await file.writeAsBytes(data.buffer.asUint8List(), flush: true);
+    }
+    return file.path;
+  }
+
   /// 播放音频
   Future<void> play(String assetPath) async {
     try {
+      await _audioSessionReady;
       if (_currentAudio == assetPath && _isPlaying) {
         await _player.pause();
         _isPlaying = false;
@@ -37,7 +70,8 @@ class AudioProvider extends ChangeNotifier {
       }
 
       if (_currentAudio != assetPath) {
-        await _player.setAsset(assetPath);
+        final filePath = await _materializeAsset(assetPath);
+        await _player.setFilePath(filePath);
         _currentAudio = assetPath;
       }
 
