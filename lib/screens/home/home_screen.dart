@@ -13,6 +13,9 @@ import '../profile/profile_screen.dart';
 import '../review/flashcard_screen.dart';
 import '../quick_start/quick_start_screen.dart';
 import '../../widgets/adaptive_content.dart';
+import '../../services/learning_plan_service.dart';
+import '../diagnostic/diagnostic_screen.dart';
+import '../learning_plan/learning_plan_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -71,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Consumer3<UserProvider, SRSProvider, CourseProvider>(
       builder: (context, user, srs, courses, _) {
         final firstScene = courses.getScene('dining_1');
+        final learningPlan = Provider.of<LearningPlanService?>(context);
 
         return SafeArea(
           child: SingleChildScrollView(
@@ -123,6 +127,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   if (firstScene != null) ...[
                     _buildQuickStartCard(context, firstScene),
+                    const SizedBox(height: 20),
+                  ],
+
+                  if (learningPlan != null && !learningPlan.hasPlan) ...[
+                    _buildDiagnosticCard(context),
+                    const SizedBox(height: 20),
+                  ] else if (learningPlan?.hasPlan == true) ...[
+                    _buildPlanCard(context, learningPlan!),
                     const SizedBox(height: 20),
                   ],
 
@@ -226,6 +238,104 @@ class _HomeScreenState extends State<HomeScreen> {
               Icons.arrow_forward_ios,
               color: Colors.white70,
               size: 18,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiagnosticCard(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DiagnosticScreen()),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.warmSurface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.14)),
+        ),
+        child: const Row(
+          children: [
+            Text('🧭', style: TextStyle(fontSize: 30)),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '先做 3 分钟诊断',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    '按你的目标，生成 7 天最快开口路线',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.primary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlanCard(BuildContext context, LearningPlanService service) {
+    final plan = service.plan!;
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LearningPlanScreen()),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.warmSurface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.14)),
+        ),
+        child: Row(
+          children: [
+            const Text('🗓️', style: TextStyle(fontSize: 30)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '第 ${plan.todayIndex + 1} 天 · ${plan.todayFocus}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${plan.goalLabel} · ${plan.minutesPerDay} 分钟，打开 7 天计划',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: AppColors.primary,
             ),
           ],
         ),

@@ -45,10 +45,14 @@ flutter build web --dart-define=AI_PROXY_BASE_URL=https://api.example.com/ai/cha
 - 场景完成后自动把词汇加入 SRS 复习队列。
 - 录音跟读和 Azure 发音评估。
 - AI 教练「阿明」对话、纠错和复盘。
+- 阿明语音输入、粤语语音回复，以及 5 个高频生存场景的分支角色扮演。
+- 入门诊断和持久化的 7 天开口计划。
 - Hive 本地保存学习进度、复习卡片和试用状态。
 
 ## 当前限制
 
 - 支付服务仍是本地试用状态，尚未接入 App Store 或 Google Play 收据验证。
 - AI 和发音服务需要配置外部服务；未配置时使用离线提示。生产环境应分别配置 `AI_PROXY_BASE_URL` 和 `AZURE_SPEECH_PROXY_URL`。
+- `AI_PROXY_BASE_URL` 需要兼容 OpenAI Chat Completions；`AZURE_SPEECH_PROXY_URL` 接收 16kHz WAV 和 `Pronunciation-Assessment` 请求头。两个代理都必须在服务端保存上游密钥，不能把密钥打进 IPA。
+- 未配置代理时，阿明仍可运行本地分支角色扮演；录音按钮会提示无法进行云端识别，不会伪造评分。
 - Web 端暂不支持本地录音评分，移动端和桌面端可使用录音功能。

@@ -72,6 +72,12 @@ class AICoachService {
 
   bool get usesProxy => _proxyUrl.isNotEmpty;
 
+  String get connectionLabel {
+    if (usesProxy) return '在线 AI 代理';
+    if (!kReleaseMode && _apiKey.isNotEmpty) return '本地开发直连';
+    return '离线角色扮演';
+  }
+
   bool get isConfigured => usesProxy || (!kReleaseMode && _apiKey.isNotEmpty);
 
   void dispose() {
@@ -166,6 +172,7 @@ class AICoachService {
     required String level,
     required List<Map<String, String>> history,
     required String userInput,
+    String? rolePlayInstruction,
   }) async {
     if (!isConfigured) {
       return CoachMessage(role: 'ming', text: '哎呀，我而家未連到線⋯⋯不如你試下跟住課程讀先？');
@@ -174,6 +181,9 @@ class AICoachService {
     final systemPrompt = _mingPersona
         .replaceAll('{scene}', scene)
         .replaceAll('{level}', level);
+    final guidedPrompt = rolePlayInstruction == null
+        ? systemPrompt
+        : '$systemPrompt\n\n角色扮演当前任务：$rolePlayInstruction';
 
     final messages = <Map<String, String>>[];
 
@@ -190,7 +200,7 @@ class AICoachService {
 
     try {
       final response = await _callMessages(
-        system: systemPrompt,
+        system: guidedPrompt,
         messages: messages,
         model: _modelFast,
       );

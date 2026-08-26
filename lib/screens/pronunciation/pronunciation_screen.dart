@@ -177,6 +177,17 @@ class _PronunciationScreenState extends State<PronunciationScreen> {
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
         ],
+        const SizedBox(height: 12),
+        Text(
+          speech.isConfigured ? '云端粤语发音评分已接通' : '录音功能已就绪，云端评分代理尚未配置',
+          style: TextStyle(
+            fontSize: 12,
+            color: speech.isConfigured
+                ? AppColors.success
+                : AppColors.textSecondary,
+          ),
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }

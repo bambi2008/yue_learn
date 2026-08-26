@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import '../../services/ai_coach_service.dart';
+import '../../services/role_play_service.dart';
+import '../../data/role_play_scenarios.dart';
+import '../../models/role_play.dart';
+import '../../providers/speech_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/adaptive_content.dart';
 import '../../widgets/audio_button.dart';
@@ -16,20 +22,21 @@ class _CoachScreenState extends State<CoachScreen> {
   final TextEditingController _textCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final List<CoachMessage> _messages = [];
+  final RolePlayService _rolePlay = RolePlayService();
   bool _isLoading = false;
-  String _scene = '茶餐厅点餐';
-
-  static const _scenes = ['茶餐厅点餐', '港铁问路', '商场买衫', '自我介绍', '开会讨论', '自由倾偈'];
+  bool _isVoiceRecording = false;
+  bool _isVoiceProcessing = false;
+  late RolePlayScenario _scenario;
+  int _turnIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    _scenario = rolePlayScenarios.first;
     _messages.add(
       CoachMessage(
         role: 'ming',
-        text:
-            '嗨！我係阿明，你嘅粵語朋友～\n'
-            '你想練咩場景呀？揀一個，或者隨便傾都得㗎！ 😄',
+        text: '${_scenario.opening}\n\n${_scenario.turns.first.prompt}',
       ),
     );
   }
@@ -60,6 +67,7 @@ class _CoachScreenState extends State<CoachScreen> {
           // 场景选择
           _buildSceneChips(),
           const Divider(height: 1),
+          _buildRolePlayBanner(),
 
           // 对话列表
           Expanded(
@@ -95,13 +103,13 @@ class _CoachScreenState extends State<CoachScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: _scenes.length,
+        itemCount: rolePlayScenarios.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
-          final s = _scenes[i];
-          final isSelected = s == _scene;
+          final scenario = rolePlayScenarios[i];
+          final isSelected = scenario.id == _scenario.id;
           return GestureDetector(
-            onTap: () => setState(() => _scene = s),
+            onTap: () => _selectScenario(scenario),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
@@ -109,7 +117,7 @@ class _CoachScreenState extends State<CoachScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                s,
+                '${scenario.icon} ${scenario.title}',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -121,6 +129,73 @@ class _CoachScreenState extends State<CoachScreen> {
         },
       ),
     );
+  }
+
+  Widget _buildRolePlayBanner() {
+    final turn = _scenario.turns[_turnIndex];
+    final configured = _coach.isConfigured;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      color: AppColors.warmSurface,
+      child: Row(
+        children: [
+          const Icon(Icons.route_rounded, size: 18, color: AppColors.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '第 ${_turnIndex + 1}/${_scenario.turns.length} 步 · ${_scenario.description}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  configured ? '在线 AI 已接通，阿明会按情境追问' : '离线角色扮演已开启，先练最常用回应',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () =>
+                      setState(() => _textCtrl.text = turn.exampleAnswer),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 24),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    '示范：${turn.exampleAnswer}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _selectScenario(RolePlayScenario scenario) {
+    setState(() {
+      _scenario = scenario;
+      _turnIndex = 0;
+      _messages
+        ..clear()
+        ..add(
+          CoachMessage(
+            role: 'ming',
+            text: '${scenario.opening}\n\n${scenario.turns.first.prompt}',
+          ),
+        );
+    });
+    _scrollToBottom();
   }
 
   Widget _buildMessage(CoachMessage msg) {
@@ -244,6 +319,7 @@ class _CoachScreenState extends State<CoachScreen> {
   }
 
   Widget _buildInputBar() {
+    final speech = Provider.of<SpeechProvider?>(context);
     return SafeArea(
       child: AdaptiveContent(
         maxWidth: 760,
@@ -283,7 +359,32 @@ class _CoachScreenState extends State<CoachScreen> {
               ),
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: _sendMessage,
+                onTap: speech == null || _isVoiceProcessing
+                    ? null
+                    : () => _toggleVoiceInput(speech),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _isVoiceRecording
+                        ? AppColors.error
+                        : AppColors.warmSurface,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _isVoiceProcessing
+                        ? Icons.hourglass_top_rounded
+                        : _isVoiceRecording
+                        ? Icons.stop_rounded
+                        : Icons.mic_none_rounded,
+                    color: _isVoiceRecording ? Colors.white : AppColors.primary,
+                    size: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _isLoading ? null : _sendMessage,
                 child: Container(
                   width: 44,
                   height: 44,
@@ -305,6 +406,42 @@ class _CoachScreenState extends State<CoachScreen> {
     );
   }
 
+  Future<void> _toggleVoiceInput(SpeechProvider speech) async {
+    if (_isVoiceRecording) {
+      setState(() {
+        _isVoiceRecording = false;
+        _isVoiceProcessing = true;
+      });
+      final text = await speech.stopAndTranscribe();
+      if (!mounted) return;
+      setState(() => _isVoiceProcessing = false);
+      if (text == null || text.trim().isEmpty) {
+        final message = speech.errorMessage.isEmpty
+            ? '没有听清，请再讲一次'
+            : speech.errorMessage;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+        return;
+      }
+      _textCtrl.text = text;
+      _sendMessage();
+      return;
+    }
+
+    setState(() => _isVoiceRecording = true);
+    await speech.startRecording('');
+    if (!mounted) return;
+    if (speech.state != SpeechState.recording) {
+      setState(() => _isVoiceRecording = false);
+      if (speech.errorMessage.isNotEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(speech.errorMessage)));
+      }
+    }
+  }
+
   void _sendMessage() async {
     final text = _textCtrl.text.trim();
     if (text.isEmpty || _isLoading) return;
@@ -323,19 +460,39 @@ class _CoachScreenState extends State<CoachScreen> {
         .map((m) => {'role': m.role, 'text': m.text})
         .toList();
 
-    final reply = await _coach.chat(
-      scene: _scene,
-      level: 'beginner',
-      history: history,
-      userInput: text,
-    );
+    final turn = _scenario.turns[_turnIndex];
+    final reply = _coach.isConfigured
+        ? await _coach.chat(
+            scene: _scenario.title,
+            level: 'beginner',
+            history: history,
+            userInput: text,
+            rolePlayInstruction:
+                '当前第 ${_turnIndex + 1} 步。学习者要完成：${turn.prompt}。示范句：${turn.exampleAnswer}。请保持简短，回应后继续推进情境。',
+          )
+        : _offlineReply(text);
 
     if (!mounted) return;
     setState(() {
       _messages.add(reply);
       _isLoading = false;
+      if (_coach.isConfigured && _turnIndex < _scenario.turns.length - 1) {
+        _turnIndex++;
+      }
     });
     _scrollToBottom();
+  }
+
+  CoachMessage _offlineReply(String text) {
+    final result = _rolePlay.respond(
+      scenario: _scenario,
+      turnIndex: _turnIndex,
+      input: text,
+    );
+    if (result.accepted) {
+      _turnIndex = result.nextTurn;
+    }
+    return CoachMessage(role: 'ming', text: result.reply);
   }
 
   void _reviewSession() async {

@@ -20,7 +20,7 @@
 尚未完成的外部依赖：
 
 - 当前 Mac 有 1 个有效 Apple Development 身份及 Xcode 管理的开发描述文件，但尚未验证 Apple Distribution / App Store 描述文件。
-- 当前没有已连接的 iPhone 或 iPad 真机，无法完成录音、权限弹窗和真机性能验证。
+- 当前已发现并配对 iPhone 13（iOS 26.6，开发者模式已开启）；Build 8 已安装，但首次启动被系统拦截为“开发者尚未明确信任”，需要在 iPhone 的“设置 > 通用 > VPN 与设备管理”信任开发者后才能完成录音和权限弹窗验证。
 - App 内购买尚未接入 StoreKit；在完成商品、收据验证和恢复购买前不能把当前购买入口作为正式付费能力上架。
 - 正式环境仍需提供 AI 与发音代理地址、隐私政策 URL、支持 URL 和 App Store Connect 隐私问卷答案。
 
@@ -75,7 +75,7 @@ flutter build ipa \
 
 不要把 Qwen 或 Azure 密钥通过 `--dart-define` 打入正式客户端。上传前检查 Archive 中的版本、签名 Team、Bundle ID、图标、隐私清单和 dSYM；随后先发 TestFlight Internal Testing，按上面的真机矩阵复验。
 
-本次已生成并验证 `build/ios/ipa/yue_learn.ipa`（版本 1.0.0，build 7）。Build 7 使用内部测试开关绕过本地试用支付墙，适合 TestFlight 内部测试，不代表正式生产包的付费逻辑已完成。上传需要 App Store Connect API key 或已登录的 Transporter；本机已将该包载入 Transporter，等待交付上传。
+本次已生成并验证 `build/ios/ipa/yue_learn.ipa`（版本 1.0.0，build 8）。Build 8 使用内部测试开关绕过本地试用支付墙，包含语音输入、分支角色扮演和 7 天计划，适合 TestFlight 内部测试，不代表正式生产包的付费逻辑已完成。上传需要 App Store Connect API key 或已登录的 Transporter；本机已将该包载入 Transporter，等待交付上传。
 
 内部测试构建命令：
 
@@ -89,6 +89,21 @@ flutter build ipa \
 ```
 
 正式生产构建不要传 `INTERNAL_TEST_ACCESS=true`；在 StoreKit 商品、交易监听、收据验证和恢复购买完成前，不要把正式包提交为可购买版本。
+
+语音交流闭环构建需要同时传入两个服务端代理地址：
+
+```bash
+flutter build ipa \
+  --release \
+  --export-method app-store \
+  --build-name 1.0.0 \
+  --build-number <递增数字> \
+  --dart-define=INTERNAL_TEST_ACCESS=true \
+  --dart-define=AI_PROXY_BASE_URL=https://<your-domain>/ai/chat/completions \
+  --dart-define=AZURE_SPEECH_PROXY_URL=https://<your-domain>/ai/pronunciation
+```
+
+未提供真实代理地址时，Build 仍可用于离线角色扮演和粤语 TTS，但阿明语音输入与 Azure 发音评分不会显示为已接通。
 
 使用 API key 上传：
 

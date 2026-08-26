@@ -100,6 +100,39 @@ class SpeechProvider extends ChangeNotifier {
     }
   }
 
+  /// 阿明语音输入：录音后通过同一 Azure/代理链路取回识别文本。
+  Future<String?> stopAndTranscribe() async {
+    try {
+      final path = await _recorder.stop();
+      if (path == null) {
+        _errorMessage = '录音文件为空';
+        _state = SpeechState.idle;
+        notifyListeners();
+        return null;
+      }
+
+      _state = SpeechState.assessing;
+      _errorMessage = '';
+      notifyListeners();
+
+      final text = await _service.transcribeRecording(audioFilePath: path);
+      await deleteRecordingFile(path);
+      _state = SpeechState.done;
+      if (text == null) {
+        _errorMessage = _service.isConfigured
+            ? '没有听清，请再讲一次'
+            : '语音识别代理尚未配置，暂时只能用文字输入';
+      }
+      notifyListeners();
+      return text;
+    } catch (e) {
+      _errorMessage = '语音识别失败，请再试一次';
+      _state = SpeechState.idle;
+      notifyListeners();
+      return null;
+    }
+  }
+
   /// 重置状态
   void reset() {
     _state = SpeechState.idle;

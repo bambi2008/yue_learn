@@ -10,6 +10,7 @@ class PronunciationResult {
   final double fluencyScore;
   final double completenessScore;
   final double overallScore;
+  final String recognizedText;
   final List<WordResult> words;
 
   PronunciationResult({
@@ -17,16 +18,19 @@ class PronunciationResult {
     required this.fluencyScore,
     required this.completenessScore,
     required this.overallScore,
+    this.recognizedText = '',
     required this.words,
   });
 
   factory PronunciationResult.fromJson(Map<String, dynamic> json) {
     final nBest = json['NBest'] as List?;
+    final firstBest = nBest != null && nBest.isNotEmpty
+        ? nBest.first as Map<String, dynamic>
+        : null;
     final words = <WordResult>[];
 
-    if (nBest != null && nBest.isNotEmpty) {
-      final first = nBest[0] as Map<String, dynamic>;
-      final wordList = first['Words'] as List? ?? [];
+    if (firstBest != null) {
+      final wordList = firstBest['Words'] as List? ?? [];
       for (final w in wordList) {
         words.add(WordResult.fromJson(w as Map<String, dynamic>));
       }
@@ -37,6 +41,12 @@ class PronunciationResult {
       fluencyScore: (json['FluencyScore'] as num?)?.toDouble() ?? 0.0,
       completenessScore: (json['CompletenessScore'] as num?)?.toDouble() ?? 0.0,
       overallScore: (json['PronScore'] as num?)?.toDouble() ?? 0.0,
+      recognizedText:
+          (json['Display'] ??
+                  json['NBest']?[0]?['Display'] ??
+                  json['NBest']?[0]?['Lexical'] ??
+                  '')
+              .toString(),
       words: words,
     );
   }
@@ -50,6 +60,7 @@ class PronunciationResult {
       fluencyScore: score,
       completenessScore: actual.isNotEmpty ? 100 : 0,
       overallScore: score,
+      recognizedText: actual,
       words: [],
     );
   }
@@ -179,6 +190,19 @@ class AzureSpeechService {
       // Azure 不可用时使用离线备选
       return _fallbackAssessment(audioFilePath, referenceText);
     }
+  }
+
+  /// 使用同一个 Azure/代理链路获取粤语识别文本，供阿明语音输入使用。
+  /// 代理仍接收标准 Pronunciation-Assessment 请求头，只是参考文本为空。
+  Future<String?> transcribeRecording({required String audioFilePath}) async {
+    if (!isConfigured) return null;
+
+    final result = await assessPronunciation(
+      audioFilePath: audioFilePath,
+      referenceText: '',
+    );
+    final text = result.recognizedText.trim();
+    return text.isEmpty ? null : text;
   }
 
   /// 离线备选：仅对比文本
