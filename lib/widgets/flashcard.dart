@@ -8,11 +8,7 @@ class FlashcardWidget extends StatefulWidget {
   final ReviewCard card;
   final bool showBack;
 
-  const FlashcardWidget({
-    super.key,
-    required this.card,
-    this.showBack = false,
-  });
+  const FlashcardWidget({super.key, required this.card, this.showBack = false});
 
   @override
   State<FlashcardWidget> createState() => _FlashcardWidgetState();
@@ -32,9 +28,10 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
       duration: const Duration(milliseconds: 400),
       vsync: this,
     );
-    _animation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _animation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
     if (_showBack) {
       _controller.value = 1.0;
     }
@@ -49,6 +46,26 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
         _controller.reverse();
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant FlashcardWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.card.id != widget.card.id) {
+      _showBack = widget.showBack;
+      _controller.value = _showBack ? 1.0 : 0.0;
+      return;
+    }
+
+    if (oldWidget.showBack != widget.showBack) {
+      _showBack = widget.showBack;
+      if (_showBack) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    }
   }
 
   @override
@@ -110,6 +127,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
           const SizedBox(height: 24),
           AudioButton(
             audioPath: widget.card.audioPath,
+            text: widget.card.cantonese,
             size: 44,
           ),
         ],
@@ -148,8 +166,10 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
               ),
               const SizedBox(height: 16),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.warmSurface,
                   borderRadius: BorderRadius.circular(8),

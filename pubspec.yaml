@@ -13,12 +13,14 @@ dependencies:
   provider: ^6.1.2
   hive: ^2.2.3
   hive_flutter: ^1.1.0
+  audio_session: ^0.1.25
   just_audio: ^0.9.42
   http: ^1.2.2
   path_provider: ^2.1.5
   intl: ^0.19.0
   record: ^7.1.1
   google_fonts: ^6.2.1
+  flutter_tts: ^4.2.5
 
 dev_dependencies:
   flutter_test:
@@ -35,4 +37,3 @@ flutter:
     - assets/audio/transport/
     - assets/audio/shopping/
     - assets/audio/workplace/
-    - assets/images/

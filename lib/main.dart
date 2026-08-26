@@ -8,6 +8,7 @@ import 'providers/user_provider.dart';
 import 'providers/srs_provider.dart';
 import 'providers/speech_provider.dart';
 import 'services/purchase_service.dart';
+import 'services/learning_plan_service.dart';
 import 'models/course.dart';
 import 'models/review_card.dart';
 import 'models/user_progress.dart';
@@ -32,6 +33,7 @@ void main() async {
 
   // 打开 Boxes
   await Hive.openBox(AppConstants.coursesBox);
+  await Hive.openBox(AppConstants.settingsBox);
   await Hive.openBox<ReviewCard>(AppConstants.reviewCardsBox);
   final userBox = await Hive.openBox<UserProgress>(
     AppConstants.userProgressBox,
@@ -56,6 +58,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => UserProvider(userProgress)),
         ChangeNotifierProvider(create: (_) => SRSProvider()),
         ChangeNotifierProvider(create: (_) => SpeechProvider()),
+        ChangeNotifierProvider(create: (_) => LearningPlanService()..load()),
         ChangeNotifierProvider.value(value: purchaseService),
       ],
       child: const YueLearnApp(),

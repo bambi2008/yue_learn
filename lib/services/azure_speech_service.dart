@@ -1,7 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../utils/constants.dart';
+import '../utils/recording_file.dart';
 
 /// Azure 发音评估结果
 class PronunciationResult {
@@ -9,6 +10,7 @@ class PronunciationResult {
   final double fluencyScore;
   final double completenessScore;
   final double overallScore;
+  final String recognizedText;
   final List<WordResult> words;
 
   PronunciationResult({
@@ -16,36 +18,41 @@ class PronunciationResult {
     required this.fluencyScore,
     required this.completenessScore,
     required this.overallScore,
+    this.recognizedText = '',
     required this.words,
   });
 
   factory PronunciationResult.fromJson(Map<String, dynamic> json) {
     final nBest = json['NBest'] as List?;
+    final firstBest = nBest != null && nBest.isNotEmpty
+        ? nBest.first as Map<String, dynamic>
+        : null;
     final words = <WordResult>[];
 
-    if (nBest != null && nBest.isNotEmpty) {
-      final first = nBest[0] as Map<String, dynamic>;
-      final wordList = first['Words'] as List? ?? [];
+    if (firstBest != null) {
+      final wordList = firstBest['Words'] as List? ?? [];
       for (final w in wordList) {
         words.add(WordResult.fromJson(w as Map<String, dynamic>));
       }
     }
 
     return PronunciationResult(
-      accuracyScore:
-          (json['AccuracyScore'] as num?)?.toDouble() ?? 0.0,
-      fluencyScore:
-          (json['FluencyScore'] as num?)?.toDouble() ?? 0.0,
-      completenessScore:
-          (json['CompletenessScore'] as num?)?.toDouble() ?? 0.0,
+      accuracyScore: (json['AccuracyScore'] as num?)?.toDouble() ?? 0.0,
+      fluencyScore: (json['FluencyScore'] as num?)?.toDouble() ?? 0.0,
+      completenessScore: (json['CompletenessScore'] as num?)?.toDouble() ?? 0.0,
       overallScore: (json['PronScore'] as num?)?.toDouble() ?? 0.0,
+      recognizedText:
+          (json['Display'] ??
+                  json['NBest']?[0]?['Display'] ??
+                  json['NBest']?[0]?['Lexical'] ??
+                  '')
+              .toString(),
       words: words,
     );
   }
 
   /// 简化版（仅文本对比，离线模式）
-  factory PronunciationResult.simple(
-      String expected, String actual) {
+  factory PronunciationResult.simple(String expected, String actual) {
     // 简单编辑距离对比
     final score = _calculateSimpleScore(expected, actual);
     return PronunciationResult(
@@ -53,12 +60,12 @@ class PronunciationResult {
       fluencyScore: score,
       completenessScore: actual.isNotEmpty ? 100 : 0,
       overallScore: score,
+      recognizedText: actual,
       words: [],
     );
   }
 
-  static double _calculateSimpleScore(
-      String expected, String actual) {
+  static double _calculateSimpleScore(String expected, String actual) {
     if (expected.isEmpty) return 0;
     if (actual.isEmpty) return 0;
 
@@ -69,8 +76,7 @@ class PronunciationResult {
     final set1 = expectedChars.toSet();
     final set2 = actualChars.toSet();
 
-    final intersection =
-        set1.intersection(set2).length;
+    final intersection = set1.intersection(set2).length;
     final union = set1.union(set2).length;
 
     if (union == 0) return 0;
@@ -90,32 +96,60 @@ class WordResult {
     this.errorType = 'None',
   });
 
-  bool get isCorrect =>
-      errorType == 'None' && accuracyScore >= 80;
+  bool get isCorrect => errorType == 'None' && accuracyScore >= 80;
 
   factory WordResult.fromJson(Map<String, dynamic> json) {
     return WordResult(
       word: json['Word'] as String? ?? '',
       accuracyScore:
-          (json['PronunciationAssessment']?['AccuracyScore']
-                  as num?)
+          (json['PronunciationAssessment']?['AccuracyScore'] as num?)
               ?.toDouble() ??
           0.0,
-      errorType: json['PronunciationAssessment']?['ErrorType']
-              as String? ??
-          'None',
+      errorType:
+          json['PronunciationAssessment']?['ErrorType'] as String? ?? 'None',
     );
   }
 }
 
 /// Azure Speech Service 封装
 class AzureSpeechService {
-  final String _key = AppConstants.azureSpeechKey;
-  final String _region = AppConstants.azureSpeechRegion;
+  final http.Client _client;
+  final bool _ownsClient;
+  final String _key;
+  final String _region;
+  final String _proxyUrl;
+  final String _ttsProxyUrl;
+
+  AzureSpeechService({
+    http.Client? client,
+    String? key,
+    String? region,
+    String? proxyUrl,
+    String? ttsProxyUrl,
+  }) : _client = client ?? http.Client(),
+       _ownsClient = client == null,
+       _key = key ?? AppConstants.azureSpeechKey,
+       _region = region ?? AppConstants.azureSpeechRegion,
+       _proxyUrl = proxyUrl ?? AppConstants.azureSpeechProxyUrl,
+       _ttsProxyUrl = ttsProxyUrl ?? AppConstants.azureTtsProxyUrl;
+
+  bool get usesProxy => _proxyUrl.isNotEmpty;
 
   /// 检查是否已配置 Azure Key
-  bool get isConfigured =>
-      _key.isNotEmpty && _key != 'YOUR_AZURE_SPEECH_KEY';
+  bool get isConfigured => usesProxy || (!kReleaseMode && _key.isNotEmpty);
+
+  /// 检查是否已配置 Azure Neural TTS。
+  /// 生产包只允许通过服务端代理，开发环境可以临时使用 Azure Key。
+  bool get usesTtsProxy => _ttsProxyUrl.isNotEmpty;
+
+  bool get isTtsConfigured =>
+      usesTtsProxy || (!kReleaseMode && _key.isNotEmpty);
+
+  void dispose() {
+    if (_ownsClient) {
+      _client.close();
+    }
+  }
 
   /// 使用 Azure Pronunciation Assessment 评分
   /// [audioFilePath] - 录音文件路径 (.wav, PCM 16kHz 16bit mono)
@@ -129,28 +163,32 @@ class AzureSpeechService {
     }
 
     try {
-      final audioBytes = await File(audioFilePath).readAsBytes();
+      final audioBytes = await readRecordingBytes(audioFilePath);
 
       // Azure Speech-to-Text REST API with Pronunciation Assessment
-      final url =
-          'https://$_region.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?'
-          'language=zh-HK'
-          '&format=Detailed'
-          '&profanity=raw';
+      final url = usesProxy
+          ? _proxyUrl
+          : 'https://$_region.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?'
+                'language=zh-HK'
+                '&format=Detailed'
+                '&profanity=raw';
 
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Ocp-Apim-Subscription-Key': _key,
-          'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
-          'Pronunciation-Assessment':
-              '{"ReferenceText":"$referenceText",'
-                  '"GradingSystem":"HundredMark",'
-                  '"Granularity":"Word",'
-                  '"EnableMiscue":"true"}',
-        },
-        body: audioBytes,
-      ).timeout(const Duration(seconds: 15));
+      final headers = <String, String>{
+        'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+        'Pronunciation-Assessment': jsonEncode({
+          'ReferenceText': referenceText,
+          'GradingSystem': 'HundredMark',
+          'Granularity': 'Word',
+          'EnableMiscue': 'true',
+        }),
+      };
+      if (!usesProxy) {
+        headers['Ocp-Apim-Subscription-Key'] = _key;
+      }
+
+      final response = await _client
+          .post(Uri.parse(url), headers: headers, body: audioBytes)
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -163,6 +201,68 @@ class AzureSpeechService {
       return _fallbackAssessment(audioFilePath, referenceText);
     }
   }
+
+  /// 使用同一个 Azure/代理链路获取粤语识别文本，供阿明语音输入使用。
+  /// 代理仍接收标准 Pronunciation-Assessment 请求头，只是参考文本为空。
+  Future<String?> transcribeRecording({required String audioFilePath}) async {
+    if (!isConfigured) return null;
+
+    final result = await assessPronunciation(
+      audioFilePath: audioFilePath,
+      referenceText: '',
+    );
+    final text = result.recognizedText.trim();
+    return text.isEmpty ? null : text;
+  }
+
+  /// 使用 Azure Neural Voice 合成粤语语音。
+  ///
+  /// 代理的请求体是 Azure 标准 SSML，返回 MP3 音频字节；代理必须在
+  /// 服务端保存 Azure 密钥。开发环境直连仅用于本地调试。
+  Future<List<int>?> synthesizeSpeech({
+    required String text,
+    String? voice,
+  }) async {
+    final normalized = text.trim();
+    if (normalized.isEmpty || !isTtsConfigured) return null;
+
+    final selectedVoice = voice ?? AppConstants.azureTtsVoice;
+    final ssml =
+        '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" '
+        'xml:lang="zh-HK"><voice name="$selectedVoice">'
+        '${_escapeXml(normalized)}</voice></speak>';
+    final url = usesTtsProxy
+        ? _ttsProxyUrl
+        : 'https://$_region.tts.speech.microsoft.com/cognitiveservices/v1';
+    final headers = <String, String>{
+      'Content-Type': 'application/ssml+xml',
+      'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3',
+      'User-Agent': 'YueLearn',
+    };
+    if (!usesTtsProxy) {
+      headers['Ocp-Apim-Subscription-Key'] = _key;
+    }
+
+    try {
+      final response = await _client
+          .post(Uri.parse(url), headers: headers, body: utf8.encode(ssml))
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final bytes = response.bodyBytes;
+        return bytes.isEmpty ? null : bytes;
+      }
+    } catch (_) {
+      // 播放层会回退到 iOS 系统语音，不阻断学习流程。
+    }
+    return null;
+  }
+
+  static String _escapeXml(String value) => value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&apos;');
 
   /// 离线备选：仅对比文本
   Future<PronunciationResult> _fallbackAssessment(

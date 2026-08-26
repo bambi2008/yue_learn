@@ -47,9 +47,17 @@ class UserProvider extends ChangeNotifier {
     _save();
   }
 
+  /// 记录一次“今日开口”练习，不要求完成整门场景课。
+  void recordPracticeSession() {
+    _progress.markStudied();
+    _save();
+  }
+
   /// 今日复习计数
   void incrementTodayReviewed() {
     _progress.todayReviewed++;
+    // 复习也属于学习行为，更新学习日期后，下一天才能正确重置计数。
+    _progress.markStudied();
     _save();
   }
 
@@ -57,7 +65,9 @@ class UserProvider extends ChangeNotifier {
   void resetTodayReviewedIfNeeded() {
     final now = DateTime.now();
     final last = _progress.lastStudyDate;
-    if (now.day != last.day || now.month != last.month || now.year != last.year) {
+    if (now.day != last.day ||
+        now.month != last.month ||
+        now.year != last.year) {
       _progress.todayReviewed = 0;
       _save();
     }

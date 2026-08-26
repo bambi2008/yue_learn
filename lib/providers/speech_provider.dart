@@ -1,7 +1,7 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import '../services/azure_speech_service.dart';
+import '../utils/recording_file.dart';
 import 'user_provider.dart';
 
 enum SpeechState { idle, recording, assessing, done }
@@ -28,6 +28,12 @@ class SpeechProvider extends ChangeNotifier {
     _errorMessage = '';
 
     try {
+      if (kIsWeb) {
+        _errorMessage = '网页端暂不支持本地录音评分，请使用移动端或桌面端';
+        notifyListeners();
+        return;
+      }
+
       final hasPermission = await _recorder.hasPermission();
       if (!hasPermission) {
         _errorMessage = '没有麦克风权限';
@@ -35,8 +41,7 @@ class SpeechProvider extends ChangeNotifier {
         return;
       }
 
-      final tempDir = Directory.systemTemp;
-      final filePath = '${tempDir.path}/yue_pronounce_${DateTime.now().millisecondsSinceEpoch}.wav';
+      final filePath = await createRecordingPath();
 
       await _recorder.start(
         const RecordConfig(
@@ -81,21 +86,50 @@ class SpeechProvider extends ChangeNotifier {
 
       // 保存评分
       if (result.overallScore > 0) {
-        userProvider.recordPronunciationScore(
-          result.overallScore.round(),
-        );
+        userProvider.recordPronunciationScore(result.overallScore.round());
       }
 
       // 清理录音文件
-      try {
-        await File(path).delete();
-      } catch (_) {}
+      await deleteRecordingFile(path);
 
       notifyListeners();
     } catch (e) {
       _errorMessage = '评分失败: $e';
       _state = SpeechState.idle;
       notifyListeners();
+    }
+  }
+
+  /// 阿明语音输入：录音后通过同一 Azure/代理链路取回识别文本。
+  Future<String?> stopAndTranscribe() async {
+    try {
+      final path = await _recorder.stop();
+      if (path == null) {
+        _errorMessage = '录音文件为空';
+        _state = SpeechState.idle;
+        notifyListeners();
+        return null;
+      }
+
+      _state = SpeechState.assessing;
+      _errorMessage = '';
+      notifyListeners();
+
+      final text = await _service.transcribeRecording(audioFilePath: path);
+      await deleteRecordingFile(path);
+      _state = SpeechState.done;
+      if (text == null) {
+        _errorMessage = _service.isConfigured
+            ? '没有听清，请再讲一次'
+            : '语音识别代理尚未配置，暂时只能用文字输入';
+      }
+      notifyListeners();
+      return text;
+    } catch (e) {
+      _errorMessage = '语音识别失败，请再试一次';
+      _state = SpeechState.idle;
+      notifyListeners();
+      return null;
     }
   }
 
@@ -110,6 +144,7 @@ class SpeechProvider extends ChangeNotifier {
   @override
   void dispose() {
     _recorder.dispose();
+    _service.dispose();
     super.dispose();
   }
 }
