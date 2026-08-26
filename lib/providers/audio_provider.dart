@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:path_provider/path_provider.dart';
 
 class AudioProvider extends ChangeNotifier {
   final AudioPlayer _player = AudioPlayer();
@@ -12,9 +16,10 @@ class AudioProvider extends ChangeNotifier {
   bool _isPlaying = false;
   double _speed = 1.0;
   String? _currentAudio;
-  bool _ttsReady = false;
-  bool _usingTts = false;
-  Future<void>? _ttsSetup;
+  bool _speechAvailable = false;
+  bool _usingSpeech = false;
+  late final Future<void> _audioSessionReady;
+  late final Future<void> _ttsReady;
 
   bool get isPlaying => _isPlaying;
   double get speed => _speed;
@@ -23,7 +28,8 @@ class AudioProvider extends ChangeNotifier {
   AudioPlayer get player => _player;
 
   AudioProvider() {
-    _ttsSetup = _configureTts();
+    _audioSessionReady = _configureAudioSession();
+    _ttsReady = _configureSpeech();
     _playerStateSubscription = _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         _isPlaying = false;
@@ -32,26 +38,26 @@ class AudioProvider extends ChangeNotifier {
     });
   }
 
-  Future<void> _configureTts() async {
+  Future<void> _configureSpeech() async {
     try {
       await _tts.setLanguage('zh-HK');
       await _tts.setSpeechRate(0.45);
       await _tts.setVolume(1.0);
       await _tts.setPitch(1.0);
       await _tts.awaitSpeakCompletion(true);
-      await _tts.setSharedInstance(true);
-      await _tts.setIosAudioCategory(
-        IosTextToSpeechAudioCategory.playback,
-        [IosTextToSpeechAudioCategoryOptions.defaultToSpeaker],
-        IosTextToSpeechAudioMode.spokenAudio,
-      );
-      // The base language setup is enough to speak. Voice enumeration is a
-      // best-effort enhancement because some iOS versions expose it only
-      // after the first TTS request.
-      _ttsReady = true;
+      if (Platform.isIOS) {
+        await _tts.setSharedInstance(true);
+        await _tts.setIosAudioCategory(
+          IosTextToSpeechAudioCategory.playback,
+          [IosTextToSpeechAudioCategoryOptions.defaultToSpeaker],
+          IosTextToSpeechAudioMode.spokenAudio,
+        );
+      }
+      _speechAvailable = true;
 
       // Prefer the installed high-quality Hong Kong Cantonese voice (often
-      // shown as “Fung” in iOS settings). Never silently choose zh-CN.
+      // shown as “Fung” in iOS settings). Voice enumeration is best effort:
+      // the base zh-HK setup is still valid when iOS delays this API.
       try {
         final voices = await _tts.getVoices;
         if (voices is List) {
@@ -83,20 +89,47 @@ class AudioProvider extends ChangeNotifier {
             });
           }
         }
-      } catch (e) {
-        debugPrint('TTS voice enumeration unavailable: $e');
+      } catch (error) {
+        debugPrint('TTS voice enumeration unavailable: $error');
       }
-    } catch (e) {
-      debugPrint('TTS setup error: $e');
+    } catch (error) {
+      debugPrint('Speech configuration error: $error');
     }
   }
 
-  /// 播放音频
-  Future<void> play(String assetPath, {String? text}) async {
+  Future<void> _configureAudioSession() async {
     try {
-      final key = text == null ? assetPath : '$assetPath::$text';
+      final session = await AudioSession.instance;
+      await session.configure(const AudioSessionConfiguration.music());
+    } catch (error) {
+      debugPrint('Audio session configuration error: $error');
+    }
+  }
+
+  /// The bundled files are WAV/PCM data with legacy `.mp3` names. Materialise
+  /// them with a `.wav` extension so AVPlayer selects the correct decoder.
+  Future<String> _materializeAsset(String assetPath) async {
+    final base = await getTemporaryDirectory();
+    final directory = Directory('${base.path}/yue_learn_audio');
+    await directory.create(recursive: true);
+    final safeName = assetPath
+        .replaceAll('/', '_')
+        .replaceFirst(RegExp(r'\.[^.]+$'), '.wav');
+    final file = File('${directory.path}/$safeName');
+    if (!await file.exists()) {
+      final data = await rootBundle.load(assetPath);
+      await file.writeAsBytes(data.buffer.asUint8List(), flush: true);
+    }
+    return file.path;
+  }
+
+  /// 播放音频。优先使用设备的粤语语音，旧音频文件只作为兜底。
+  Future<void> play(String assetPath, {String? text}) async {
+    final key = text == null ? assetPath : '$assetPath::$text';
+    try {
+      await _audioSessionReady;
       if (_currentAudio == key && _isPlaying) {
-        if (_usingTts) {
+        if (_usingSpeech) {
           await _tts.stop();
         } else {
           await _player.pause();
@@ -106,33 +139,36 @@ class AudioProvider extends ChangeNotifier {
         return;
       }
 
-      await _tts.stop();
       await _player.stop();
+      await _tts.stop();
       _currentAudio = key;
 
-      // The bundled files are legacy placeholders. When text is available,
-      // use the device's explicit zh-HK Cantonese voice instead.
-      if (text != null && text.isNotEmpty) {
-        await (_ttsSetup ?? Future<void>.value());
+      if (text != null && text.trim().isNotEmpty) {
+        await _ttsReady;
       }
-      if (text != null && text.isNotEmpty && _ttsReady) {
-        _usingTts = true;
+      if (text != null && text.trim().isNotEmpty && _speechAvailable) {
+        _usingSpeech = true;
         _isPlaying = true;
         notifyListeners();
-        await _tts.setSpeechRate(0.45 * _speed);
-        await _tts.speak(text);
-      } else {
-        _usingTts = false;
-        await _player.setAsset(assetPath);
-        await _player.setSpeed(_speed);
-        await _player.play();
-        _isPlaying = true;
-        notifyListeners();
+        try {
+          await _tts.setSpeechRate(0.45 * _speed);
+          await _tts.speak(text.trim());
+        } finally {
+          _isPlaying = false;
+          notifyListeners();
+        }
+        return;
       }
-      _isPlaying = false;
+
+      _usingSpeech = false;
+      final filePath = await _materializeAsset(assetPath);
+      await _player.setFilePath(filePath);
+      await _player.setSpeed(_speed);
+      _isPlaying = true;
       notifyListeners();
-    } catch (e) {
-      debugPrint('Audio playback error: $e');
+      await _player.play();
+    } catch (error) {
+      debugPrint('Audio playback error: $error');
       _isPlaying = false;
       notifyListeners();
     }
@@ -142,6 +178,7 @@ class AudioProvider extends ChangeNotifier {
   Future<void> stop() async {
     await _tts.stop();
     await _player.stop();
+    _usingSpeech = false;
     _isPlaying = false;
     notifyListeners();
   }
@@ -158,9 +195,10 @@ class AudioProvider extends ChangeNotifier {
       _speed = 1.0;
     }
 
-    await _player.setSpeed(_speed);
-    if (_usingTts && _isPlaying) {
+    if (_usingSpeech) {
       await _tts.setSpeechRate(0.45 * _speed);
+    } else {
+      await _player.setSpeed(_speed);
     }
     notifyListeners();
   }
@@ -168,7 +206,11 @@ class AudioProvider extends ChangeNotifier {
   /// 设置倍速
   Future<void> setSpeed(double speed) async {
     _speed = speed;
-    await _player.setSpeed(_speed);
+    if (_usingSpeech) {
+      await _tts.setSpeechRate(0.45 * _speed);
+    } else {
+      await _player.setSpeed(_speed);
+    }
     notifyListeners();
   }
 

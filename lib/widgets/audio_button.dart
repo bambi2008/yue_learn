@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/audio_provider.dart';
 import '../theme/app_colors.dart';
 
@@ -19,9 +20,8 @@ class AudioButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Some lightweight widget previews/tests do not install the global audio
-    // provider. Keep the control renderable there; in the real app the
-    // provider is always present and taps remain fully functional.
+    // Lightweight widget previews/tests may not install the global provider.
+    // Keep the control renderable there; the real app always supplies it.
     final audio = Provider.of<AudioProvider?>(context);
     final key = text == null ? audioPath : '$audioPath::$text';
     final isCurrentPlaying =
