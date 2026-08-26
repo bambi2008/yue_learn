@@ -33,7 +33,7 @@
 flutter run --dart-define=QWEN_API_KEY=your_qwen_key --dart-define=AZURE_SPEECH_KEY=your_azure_key --dart-define=AZURE_SPEECH_REGION=eastasia
 
 # 生产环境：使用服务端代理，不传 QWEN_API_KEY / AZURE_SPEECH_KEY
-flutter build web --dart-define=AI_PROXY_BASE_URL=https://api.example.com/ai/chat/completions --dart-define=AZURE_SPEECH_PROXY_URL=https://api.example.com/ai/pronunciation
+flutter build web --dart-define=AI_PROXY_BASE_URL=https://api.example.com/ai/chat/completions --dart-define=AZURE_SPEECH_PROXY_URL=https://api.example.com/ai/pronunciation --dart-define=AZURE_TTS_PROXY_URL=https://api.example.com/ai/tts
 ```
 
 代理负责上游 Qwen/Azure 鉴权、用户身份校验、限流和成本控制。AI 代理需兼容 OpenAI Chat Completions；发音代理需接受 WAV POST 和 `Pronunciation-Assessment` 请求头，并返回 Azure 兼容 JSON。
@@ -52,7 +52,7 @@ flutter build web --dart-define=AI_PROXY_BASE_URL=https://api.example.com/ai/cha
 ## 当前限制
 
 - 支付服务仍是本地试用状态，尚未接入 App Store 或 Google Play 收据验证。
-- AI 和发音服务需要配置外部服务；未配置时使用离线提示。生产环境应分别配置 `AI_PROXY_BASE_URL` 和 `AZURE_SPEECH_PROXY_URL`。
-- `AI_PROXY_BASE_URL` 需要兼容 OpenAI Chat Completions；`AZURE_SPEECH_PROXY_URL` 接收 16kHz WAV 和 `Pronunciation-Assessment` 请求头。两个代理都必须在服务端保存上游密钥，不能把密钥打进 IPA。
+- AI、发音和神经语音服务需要配置外部服务；未配置时使用离线提示和 iPhone 系统粤语语音。生产环境应配置 `AI_PROXY_BASE_URL`、`AZURE_SPEECH_PROXY_URL` 和 `AZURE_TTS_PROXY_URL`。
+- `AI_PROXY_BASE_URL` 需要兼容 OpenAI Chat Completions；`AZURE_SPEECH_PROXY_URL` 接收 16kHz WAV 和 `Pronunciation-Assessment` 请求头；`AZURE_TTS_PROXY_URL` 接收 Azure 标准 SSML 并返回 MP3。所有代理都必须在服务端保存上游密钥，不能把密钥打进 IPA。
 - 未配置代理时，阿明仍可运行本地分支角色扮演；录音按钮会提示无法进行云端识别，不会伪造评分。
 - Web 端暂不支持本地录音评分，移动端和桌面端可使用录音功能。

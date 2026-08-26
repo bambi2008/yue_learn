@@ -70,7 +70,8 @@ flutter build ipa \
   --build-name 1.0.0 \
   --build-number <递增数字> \
   --dart-define=AI_PROXY_BASE_URL=https://example.com/ai/chat/completions \
-  --dart-define=AZURE_SPEECH_PROXY_URL=https://example.com/ai/pronunciation
+  --dart-define=AZURE_SPEECH_PROXY_URL=https://example.com/ai/pronunciation \
+  --dart-define=AZURE_TTS_PROXY_URL=https://example.com/ai/tts
 ```
 
 不要把 Qwen 或 Azure 密钥通过 `--dart-define` 打入正式客户端。上传前检查 Archive 中的版本、签名 Team、Bundle ID、图标、隐私清单和 dSYM；随后先发 TestFlight Internal Testing，按上面的真机矩阵复验。
@@ -100,10 +101,11 @@ flutter build ipa \
   --build-number <递增数字> \
   --dart-define=INTERNAL_TEST_ACCESS=true \
   --dart-define=AI_PROXY_BASE_URL=https://<your-domain>/ai/chat/completions \
-  --dart-define=AZURE_SPEECH_PROXY_URL=https://<your-domain>/ai/pronunciation
+  --dart-define=AZURE_SPEECH_PROXY_URL=https://<your-domain>/ai/pronunciation \
+  --dart-define=AZURE_TTS_PROXY_URL=https://<your-domain>/ai/tts
 ```
 
-未提供真实代理地址时，Build 仍可用于离线角色扮演和粤语 TTS，但阿明语音输入与 Azure 发音评分不会显示为已接通。
+未提供真实代理地址时，Build 仍可用于离线角色扮演和 iPhone 系统粤语 TTS；阿明语音输入、Azure 发音评分和 Azure Neural TTS 不会显示为已接通。
 
 使用 API key 上传：
 

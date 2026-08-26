@@ -6,6 +6,7 @@ import '../../services/role_play_service.dart';
 import '../../data/role_play_scenarios.dart';
 import '../../models/role_play.dart';
 import '../../providers/speech_provider.dart';
+import '../../providers/audio_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/adaptive_content.dart';
 import '../../widgets/audio_button.dart';
@@ -134,6 +135,7 @@ class _CoachScreenState extends State<CoachScreen> {
   Widget _buildRolePlayBanner() {
     final turn = _scenario.turns[_turnIndex];
     final configured = _coach.isConfigured;
+    final audio = Provider.of<AudioProvider?>(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
@@ -161,6 +163,14 @@ class _CoachScreenState extends State<CoachScreen> {
                     color: AppColors.textSecondary,
                   ),
                 ),
+                if (audio != null)
+                  Text(
+                    audio.voiceLabel,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                 TextButton(
                   onPressed: () =>
                       setState(() => _textCtrl.text = turn.exampleAnswer),

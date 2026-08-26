@@ -7,10 +7,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
+import '../services/azure_speech_service.dart';
 
 class AudioProvider extends ChangeNotifier {
   final AudioPlayer _player = AudioPlayer();
   final FlutterTts _tts = FlutterTts();
+  final AzureSpeechService _azureSpeech = AzureSpeechService();
   late final StreamSubscription<PlayerState> _playerStateSubscription;
 
   bool _isPlaying = false;
@@ -26,6 +28,10 @@ class AudioProvider extends ChangeNotifier {
   String? get currentAudio => _currentAudio;
 
   AudioPlayer get player => _player;
+
+  String get voiceLabel => _azureSpeech.isTtsConfigured
+      ? 'Azure Neural 粤语语音'
+      : 'iPhone 系统粤语语音（离线兜底）';
 
   AudioProvider() {
     _audioSessionReady = _configureAudioSession();
@@ -123,7 +129,25 @@ class AudioProvider extends ChangeNotifier {
     return file.path;
   }
 
-  /// 播放音频。优先使用设备的粤语语音，旧音频文件只作为兜底。
+  Future<String?> _materializeAzureSpeech(String text) async {
+    if (!_azureSpeech.isTtsConfigured) return null;
+    final bytes = await _azureSpeech.synthesizeSpeech(text: text);
+    if (bytes == null || bytes.isEmpty) return null;
+
+    final base = await getTemporaryDirectory();
+    final directory = Directory('${base.path}/yue_learn_azure_tts');
+    await directory.create(recursive: true);
+    final key = text.codeUnits.fold<int>(17, (hash, code) {
+      return (hash * 31 + code) & 0x7fffffff;
+    });
+    final file = File('${directory.path}/$key.mp3');
+    if (!await file.exists() || await file.length() != bytes.length) {
+      await file.writeAsBytes(bytes, flush: true);
+    }
+    return file.path;
+  }
+
+  /// 播放音频。在线时优先使用 Azure Neural 粤语语音，再回退到系统语音或课程音频。
   Future<void> play(String assetPath, {String? text}) async {
     final key = text == null ? assetPath : '$assetPath::$text';
     try {
@@ -144,6 +168,17 @@ class AudioProvider extends ChangeNotifier {
       _currentAudio = key;
 
       if (text != null && text.trim().isNotEmpty) {
+        // 在线环境优先使用 Azure Neural Voice；失败时再回退系统语音。
+        final azurePath = await _materializeAzureSpeech(text.trim());
+        if (azurePath != null) {
+          _usingSpeech = false;
+          await _player.setFilePath(azurePath);
+          await _player.setSpeed(_speed);
+          _isPlaying = true;
+          notifyListeners();
+          await _player.play();
+          return;
+        }
         await _ttsReady;
       }
       if (text != null && text.trim().isNotEmpty && _speechAvailable) {
@@ -219,6 +254,7 @@ class AudioProvider extends ChangeNotifier {
     _playerStateSubscription.cancel();
     _tts.stop();
     _player.dispose();
+    _azureSpeech.dispose();
     super.dispose();
   }
 }

@@ -26,9 +26,12 @@ class AppConstants {
   static const String azureSpeechProxyUrl = String.fromEnvironment(
     'AZURE_SPEECH_PROXY_URL',
   );
+  static const String azureTtsProxyUrl = String.fromEnvironment(
+    'AZURE_TTS_PROXY_URL',
+  );
   static const String azureTtsVoice = String.fromEnvironment(
     'AZURE_TTS_VOICE',
-    defaultValue: 'zh-HK-HiuGaaiNeural',
+    defaultValue: 'zh-HK-WanLungNeural',
   );
 
   // 录音配置

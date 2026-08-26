@@ -118,22 +118,32 @@ class AzureSpeechService {
   final String _key;
   final String _region;
   final String _proxyUrl;
+  final String _ttsProxyUrl;
 
   AzureSpeechService({
     http.Client? client,
     String? key,
     String? region,
     String? proxyUrl,
+    String? ttsProxyUrl,
   }) : _client = client ?? http.Client(),
        _ownsClient = client == null,
        _key = key ?? AppConstants.azureSpeechKey,
        _region = region ?? AppConstants.azureSpeechRegion,
-       _proxyUrl = proxyUrl ?? AppConstants.azureSpeechProxyUrl;
+       _proxyUrl = proxyUrl ?? AppConstants.azureSpeechProxyUrl,
+       _ttsProxyUrl = ttsProxyUrl ?? AppConstants.azureTtsProxyUrl;
 
   bool get usesProxy => _proxyUrl.isNotEmpty;
 
   /// 检查是否已配置 Azure Key
   bool get isConfigured => usesProxy || (!kReleaseMode && _key.isNotEmpty);
+
+  /// 检查是否已配置 Azure Neural TTS。
+  /// 生产包只允许通过服务端代理，开发环境可以临时使用 Azure Key。
+  bool get usesTtsProxy => _ttsProxyUrl.isNotEmpty;
+
+  bool get isTtsConfigured =>
+      usesTtsProxy || (!kReleaseMode && _key.isNotEmpty);
 
   void dispose() {
     if (_ownsClient) {
@@ -204,6 +214,55 @@ class AzureSpeechService {
     final text = result.recognizedText.trim();
     return text.isEmpty ? null : text;
   }
+
+  /// 使用 Azure Neural Voice 合成粤语语音。
+  ///
+  /// 代理的请求体是 Azure 标准 SSML，返回 MP3 音频字节；代理必须在
+  /// 服务端保存 Azure 密钥。开发环境直连仅用于本地调试。
+  Future<List<int>?> synthesizeSpeech({
+    required String text,
+    String? voice,
+  }) async {
+    final normalized = text.trim();
+    if (normalized.isEmpty || !isTtsConfigured) return null;
+
+    final selectedVoice = voice ?? AppConstants.azureTtsVoice;
+    final ssml =
+        '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" '
+        'xml:lang="zh-HK"><voice name="$selectedVoice">'
+        '${_escapeXml(normalized)}</voice></speak>';
+    final url = usesTtsProxy
+        ? _ttsProxyUrl
+        : 'https://$_region.tts.speech.microsoft.com/cognitiveservices/v1';
+    final headers = <String, String>{
+      'Content-Type': 'application/ssml+xml',
+      'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3',
+      'User-Agent': 'YueLearn',
+    };
+    if (!usesTtsProxy) {
+      headers['Ocp-Apim-Subscription-Key'] = _key;
+    }
+
+    try {
+      final response = await _client
+          .post(Uri.parse(url), headers: headers, body: utf8.encode(ssml))
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final bytes = response.bodyBytes;
+        return bytes.isEmpty ? null : bytes;
+      }
+    } catch (_) {
+      // 播放层会回退到 iOS 系统语音，不阻断学习流程。
+    }
+    return null;
+  }
+
+  static String _escapeXml(String value) => value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&apos;');
 
   /// 离线备选：仅对比文本
   Future<PronunciationResult> _fallbackAssessment(
