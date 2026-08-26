@@ -75,7 +75,20 @@ flutter build ipa \
 
 不要把 Qwen 或 Azure 密钥通过 `--dart-define` 打入正式客户端。上传前检查 Archive 中的版本、签名 Team、Bundle ID、图标、隐私清单和 dSYM；随后先发 TestFlight Internal Testing，按上面的真机矩阵复验。
 
-本次已生成并验证 `build/ios/ipa/yue_learn.ipa`（版本 1.0.0，build 4）。上传需要 App Store Connect API key 或已登录的 Transporter；本机当前没有发现可用的上传凭据，因此尚未执行网络上传。
+本次已生成并验证 `build/ios/ipa/yue_learn.ipa`（版本 1.0.0，build 7）。Build 7 使用内部测试开关绕过本地试用支付墙，适合 TestFlight 内部测试，不代表正式生产包的付费逻辑已完成。上传需要 App Store Connect API key 或已登录的 Transporter；本机已将该包载入 Transporter，等待交付上传。
+
+内部测试构建命令：
+
+```bash
+flutter build ipa \
+  --release \
+  --export-method app-store \
+  --build-name 1.0.0 \
+  --build-number <递增数字> \
+  --dart-define=INTERNAL_TEST_ACCESS=true
+```
+
+正式生产构建不要传 `INTERNAL_TEST_ACCESS=true`；在 StoreKit 商品、交易监听、收据验证和恢复购买完成前，不要把正式包提交为可购买版本。
 
 使用 API key 上传：
 

@@ -11,6 +11,7 @@ import '../courses/dialogue_screen.dart';
 import '../coach/coach_screen.dart';
 import '../profile/profile_screen.dart';
 import '../review/flashcard_screen.dart';
+import '../quick_start/quick_start_screen.dart';
 import '../../widgets/adaptive_content.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -120,6 +121,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 24),
 
+                  if (firstScene != null) ...[
+                    _buildQuickStartCard(context, firstScene),
+                    const SizedBox(height: 20),
+                  ],
+
                   // Streak & stats
                   Row(
                     children: [
@@ -164,6 +170,66 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildQuickStartCard(BuildContext context, Scene scene) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => QuickStartScreen(scene: scene)),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primary, AppColors.primaryLight],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.22),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const Text('🗣️', style: TextStyle(fontSize: 38)),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '今天先开口',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  SizedBox(height: 5),
+                  Text(
+                    '5 分钟学 3 句，听 → 跟读 → 真正讲出来',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white70,
+              size: 18,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

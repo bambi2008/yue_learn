@@ -29,8 +29,9 @@ class _PaywallGate extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<PurchaseService>(
       builder: (context, purchase, _) {
-        // 已购买或试用中 → 进入主页
-        if (purchase.isPurchased || purchase.isTrial) {
+        // 内部测试包、已购买或试用中 → 进入主页。
+        // 正式包不传 INTERNAL_TEST_ACCESS，仍保留支付墙。
+        if (purchase.hasAccess) {
           return const HomeScreen();
         }
 

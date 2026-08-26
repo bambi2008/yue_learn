@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/ai_coach_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/adaptive_content.dart';
+import '../../widgets/audio_button.dart';
 
 class CoachScreen extends StatefulWidget {
   const CoachScreen({super.key});
@@ -169,6 +170,18 @@ class _CoachScreenState extends State<CoachScreen> {
                       color: isMing ? AppColors.textPrimary : Colors.white,
                     ),
                   ),
+                  if (isMing) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: AudioButton(
+                        audioPath: 'coach',
+                        text: msg.text,
+                        size: 32,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
                   if (msg.correction != null) ...[
                     const SizedBox(height: 8),
                     Container(

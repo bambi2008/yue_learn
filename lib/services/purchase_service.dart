@@ -20,6 +20,13 @@ class PurchaseService extends ChangeNotifier {
   static const String _purchasedKey = 'purchased';
 
   final String _boxName;
+
+  /// Internal TestFlight builds are for product validation, not monetisation.
+  /// Pass `--dart-define=INTERNAL_TEST_ACCESS=true` for that build only.
+  static const bool internalTestAccess = bool.fromEnvironment(
+    'INTERNAL_TEST_ACCESS',
+    defaultValue: false,
+  );
   late Box _box;
   PurchaseState _state = PurchaseState.locked;
   DateTime? _trialStart;
@@ -29,6 +36,7 @@ class PurchaseService extends ChangeNotifier {
   int get trialDaysRemaining => _trialDaysRemaining;
   bool get isPurchased => _state == PurchaseState.active;
   bool get isTrial => _state == PurchaseState.trial;
+  bool get hasAccess => internalTestAccess || isPurchased || isTrial;
 
   // Keep the public parameter name so tests and callers can inject a Hive box.
   // ignore: prefer_initializing_formals

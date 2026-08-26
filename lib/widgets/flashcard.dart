@@ -125,7 +125,11 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
             ),
           ),
           const SizedBox(height: 24),
-          AudioButton(audioPath: widget.card.audioPath, size: 44),
+          AudioButton(
+            audioPath: widget.card.audioPath,
+            text: widget.card.cantonese,
+            size: 44,
+          ),
         ],
       ),
     );

@@ -47,6 +47,12 @@ class UserProvider extends ChangeNotifier {
     _save();
   }
 
+  /// 记录一次“今日开口”练习，不要求完成整门场景课。
+  void recordPracticeSession() {
+    _progress.markStudied();
+    _save();
+  }
+
   /// 今日复习计数
   void incrementTodayReviewed() {
     _progress.todayReviewed++;
